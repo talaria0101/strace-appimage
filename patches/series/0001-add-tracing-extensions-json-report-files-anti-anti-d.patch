@@ -1,0 +1,1817 @@
+From 6ad3152f61db9cc9ea86ce48dc5e665034881395 Mon Sep 17 00:00:00 2001
+From: Talaria <324092415+talaria0101@users.noreply.github.com>
+Date: Tue, 8 Sep 2026 12:07:34 +0000
+Subject: [PATCH 1/2] add tracing extensions: --json, --report-files,
+ --anti-anti-debug, --keep-alive, --packager
+
+Five packager-facing options built on a small per-tcb capture state
+(struct tcb extension fields), the staged-output memstream already used
+by -z/-Z, the print_fields print path (printpathn, print_sockaddr_data_un),
+and the tamper machinery (set_scno(-1) skip + set_success) already
+exercised by -e inject=:
+
+* --json: one self-contained JSON object per line per published
+  syscall, plus begin/signal/exit/summary events; classic text is
+  preserved inside each event's "line" field.
+* --report-files[=FILE]: end-of-run report of every absolute path the
+  tracees touched (open/exec/stat/unlink/rename/connect/...), with
+  per-op counts and outcomes; .so paths marked as libraries;
+  missing-display/device hints. Works for static binaries (syscall
+  level, not loader level).
+* --anti-anti-debug: spoof ptrace(PTRACE_TRACEME) self-checks;
+  rewrite TracerPid digits to zeroes in tracee reads of
+  /proc/<pid>/status (length- and offset-preserving).
+* --keep-alive[=N]: suppress exit_group up to N times per process,
+  returning success, to push past early exits.
+* --packager: preset wiring the above for AppImage packaging work.
+
+Answers the standing asks in the upstream tracker (structured output:
+169, 166, 51, changesets 228/286 unmerged; anti-debug: 227). See
+patches/PATCHES.md for the registry and reproduction commands.
+---
+ NEWS               |   3 +
+ doc/strace.1.in    |  97 ++++++++++++
+ src/Makefile.am    |   5 +
+ src/anti_debug.c   | 162 ++++++++++++++++++++
+ src/defs.h         |  19 +++
+ src/file_report.c  | 364 +++++++++++++++++++++++++++++++++++++++++++++
+ src/json_out.c     | 254 +++++++++++++++++++++++++++++++
+ src/sockaddr.c     |   5 +
+ src/stage_output.c |  17 +++
+ src/strace.c       | 165 +++++++++++++++++---
+ src/syscall.c      | 104 ++++++++++++-
+ src/tracing_ext.c  | 124 +++++++++++++++
+ src/tracing_ext.h  |  69 +++++++++
+ src/util.c         |   6 +
+ 14 files changed, 1365 insertions(+), 29 deletions(-)
+ create mode 100644 src/anti_debug.c
+ create mode 100644 src/file_report.c
+ create mode 100644 src/json_out.c
+ create mode 100644 src/tracing_ext.c
+ create mode 100644 src/tracing_ext.h
+
+diff --git a/NEWS b/NEWS
+index 1dccb7e45..c65b035b9 100644
+--- a/NEWS
++++ b/NEWS
+@@ -2,6 +2,9 @@ Noteworthy changes in release ?.? (????-??-??)
+ ==============================================
+ 
+ * Improvements
++  * strace-appimage: added --json, --report-files, --anti-anti-debug,
++    --keep-alive, and --packager options (see doc/strace.1.in and the
++    repository README).
+   * Implemented decoding of fchroot syscall.
+   * Implemented decoding of SO_RIGHTS_NOTRUNC socket option.
+   * Implemented decoding of IFA_MC_USERS and IFA_PROTO netlink attributes.
+diff --git a/doc/strace.1.in b/doc/strace.1.in
+index 57de00d14..1a093ecc7 100644
+--- a/doc/strace.1.in
++++ b/doc/strace.1.in
+@@ -1891,6 +1891,103 @@ If no suffix is specified, the value defaults to microseconds.
+ The described format is used for
+ .BR \-O ", " \-\-inject = delay_enter ", and " \-\-inject = delay_exit
+ options.
++.SS "Strace\-appimage extension options"
++These options are added by the strace\-appimage patchset for packagers
++and for machine consumption of traces; see the repository README and the
++experiments directory for the rationale, comparisons, and examples.
++.TP
++.BR \-\-json
++Print machine\-readable JSON Lines events instead of the classic trace:
++one self\-contained JSON object per line for every published syscall,
++plus a leading
++.I begin
++event and a trailing
++.I summary
++event.
++Each syscall event carries the pid, the syscall name, the raw argument
++values, the decoded paths, the return value and errno name, the
++duration in microseconds, a wall\-clock timestamp, the resolved path for
++returned file descriptors, the classic strace line verbatim, and any
++extension notes.
++Classic text output is suppressed for syscall lines (it is still
++available inside each event's
++.I line
++field); signal-delivery stops, exits, and kills become their own JSON
++events, so the stream stays line-by-line parseable.
++Diagnostics (attach notices, errors) still go to the standard error
++output: when reading the stream with a parser, write it with
++.B \-o FILE
++(or redirect stderr elsewhere).
++Mutually exclusive with
++.BR \-ff / \-\-output\-separately .
++.TP
++.BI \-\-report\-files [\|=FILE\|]
++At the end of the run, report every path the tracees touched: per path,
++the operations seen (open, exec, stat, unlink, rename, connect, ...) with
++attempt and success counts and the last errno.
++Paths whose basename contains
++.I ".so"
++are marked as libraries, which makes this a drop\-in replacement for the
++.B LD_DEBUG=libs
++scraping that AppImage packaging scripts perform today \(em except it
++also works for static binaries, for paths opened outside the dynamic
++loader, and it needs no post\-processing filters.
++The report is written to FILE, or to the standard error output when no
++FILE is given.
++With
++.BR \-\-json ,
++the report is a single JSON object (type
++.IR file_report )
++instead of a text table.
++.TP
++.B \-\-anti\-anti\-debug
++Counter tracee self\-checks that detect being traced:
++.IP \(bu 4
++ptrace(PTRACE_TRACEME) self\-tests return success instead of EPERM;
++.IP \(bu 4
++reads of
++.I /proc/<pid>/status
++(and
++.IR /proc/self/status ,
++.IR /proc/thread\-self/status )
++have the digits of the
++.I TracerPid
++value rewritten to zeroes in the tracee's buffer, preserving length and
++offsets.
++.IP
++Known limits: timing\-based checks (for example rdtsc around syscalls),
++.I /proc/<pid>/wchan
++(reads as "ptrace_stop" while stopped by the tracer), and
++ptrace(PTRACE_ATTACH) self\-checks (spoofing ATTACH would make the
++caller block in wait(2) forever) are not covered.
++Spoofing TRACEME changes behaviour for tracees that use it
++.I legitimately
++(a debugger run under strace would previously get a clean error and now
++proceeds without its child stopping); do not combine
++.B \-\-anti\-anti\-debug
++with tracing debuggers/profilers that manage children of their own.
++.TP
++.BI \-\-keep\-alive [\|=N\|]
++Suppress execution of
++.IR exit_group " up to " N
++times per process (default 3), returning success to the tracee instead,
++so that programs which give up early (for example when no display is
++present) keep running and reveal more of their syscall behaviour.
++The suppression is visible in the trace (a
++.I keep\-alive
++note on the line, a note field in JSON events).
++Note that a program which has nothing left to execute after its exit
++path may crash or busy\-loop once the budget is exhausted; use the
++.I exit
++of the report to see whether that happened.
++.TP
++.B \-\-packager
++Preset for AppImage/library packaging work: enables
++.B \-\-follow\-forks ,
++.B \-\-decode\-fds = all,
++.BR \-\-report\-files ,
++and
++.BR \-\-keep\-alive =3.
+ .SH DIAGNOSTICS
+ When
+ .I command
+diff --git a/src/Makefile.am b/src/Makefile.am
+index 79c0def71..aed716490 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -63,6 +63,7 @@ libstrace_a_CFLAGS = $(strace_CFLAGS)
+ libstrace_a_SOURCES =	\
+ 	access.c	\
+ 	affinity.c	\
++	anti_debug.c	\
+ 	aio.c		\
+ 	alarm.c		\
+ 	alpha.c		\
+@@ -135,6 +136,7 @@ libstrace_a_SOURCES =	\
+ 	fetch_struct_xfs_quotastat.c \
+ 	file_attr.c	\
+ 	file_handle.c	\
++	file_report.c	\
+ 	filter.h	\
+ 	filter_qualify.c \
+ 	filter_seccomp.c \
+@@ -171,6 +173,7 @@ libstrace_a_SOURCES =	\
+ 	io.c		\
+ 	io_uring.c	\
+ 	ioctl.c		\
++	json_out.c	\
+ 	ioperm.c	\
+ 	iopl.c		\
+ 	ioprio.c	\
+@@ -408,6 +411,8 @@ libstrace_a_SOURCES =	\
+ 	trace_event.h	\
+ 	trie.c		\
+ 	trie.h		\
++	tracing_ext.c	\
++	tracing_ext.h	\
+ 	truncate.c	\
+ 	ubi.c		\
+ 	ucopy.c		\
+diff --git a/src/anti_debug.c b/src/anti_debug.c
+new file mode 100644
+index 000000000..61cee403c
+--- /dev/null
++++ b/src/anti_debug.c
+@@ -0,0 +1,162 @@
++/*
++ * anti_debug.c -- countermeasures against tracee self-checks (--anti-anti-debug).
++ *
++ * Two mechanisms live here:
++ *
++ *  1. ptrace(PTRACE_TRACEME) self-checks: a tracee already being traced
++ *     cannot TRACEME again, gets EPERM, and many programs treat that as
++ *     proof of a debugger and quit.  The retval rewrite itself happens in
++ *     syscall.c (it needs the static set_success() helper); this file
++ *     provides the note bookkeeping.
++ *
++ *  2. /proc/<pid>/status TracerPid checks: after a successful read of a
++ *     /proc/<pid>/status file, the bytes "TracerPid:<tab><pid>" in the
++ *     tracee's buffer are rewritten digit-for-digit to zeroes, so the
++ *     line still parses as an integer (0 = "not traced") and every
++ *     following byte keeps its offset.
++ *
++ * Known limits (documented in strace-appimage.1): timing-based checks
++ * (rdtsc around syscalls), /proc/<pid>/wchan ("ptrace_stop"), and
++ * ptrace(PTRACE_ATTACH) self-checks (spoofing ATTACH would make the
++ * caller block in wait() forever) are not covered.
++ *
++ * Copyright (c) 2026 The strace-appimage authors.
++ * SPDX-License-Identifier: LGPL-2.1-or-later
++ */
++
++#include "defs.h"
++#include "sen.h"
++#include "tracing_ext.h"
++
++#include <limits.h>
++
++#define TRACERPID_WINDOW 8192
++
++static bool
++path_is_proc_status(const char *path)
++{
++	static const char status_suffix[] = "/status";
++	const size_t plen = strlen(path);
++
++	if (plen <= sizeof(status_suffix) - 1)
++		return false;
++	if (strcmp(path + plen - (sizeof(status_suffix) - 1),
++		   status_suffix) != 0)
++		return false;
++
++	/* ^/proc/(self|thread-self|\d+)(/task/\d+)?/status$ */
++	if (strncmp(path, "/proc/", 6) != 0)
++		return false;
++	const char *rest = path + 6;
++
++	if (strncmp(rest, "self", 4) == 0)
++		rest += 4;
++	else if (strncmp(rest, "thread-self", 11) == 0)
++		rest += 11;
++	else
++		while (*rest >= '0' && *rest <= '9')
++			++rest;
++
++	if (strncmp(rest, "/task/", 6) == 0) {
++		rest += 6;
++		while (*rest >= '0' && *rest <= '9')
++			++rest;
++	}
++
++	return strcmp(rest, "/status") == 0;
++}
++
++/*
++ * Overwrite the digits after "TracerPid:\t" with '0' characters directly
++ * in the tracee's address space.  Called at the syscall-exit stop of a
++ * read-family syscall, before the tracee resumes and parses the buffer.
++ */
++static void
++rewrite_tracerpid(struct tcb *tcp, kernel_ulong_t buf, size_t len)
++{
++	char local[TRACERPID_WINDOW];
++	static const char needle[] = "TracerPid:";
++
++	if (len == 0)
++		return;
++	if (len > sizeof(local))
++		len = sizeof(local);
++	if (umoven(tcp, buf, len, local) < 0)
++		return;
++
++	char *p = memmem(local, len, needle, sizeof(needle) - 1);
++	if (!p)
++		return;
++	p += sizeof(needle) - 1;
++
++	/* Skip whitespace between the colon and the value. */
++	while (p < local + len && (*p == ' ' || *p == '\t'))
++		++p;
++
++	/* Rewrite every digit of the value to '0' (same length, so the
++	 * rest of the buffer keeps its offsets). */
++	kernel_ulong_t start = buf + (p - local);
++	size_t n = 0;
++	char zeros[32];
++
++	while (p < local + len && *p >= '0' && *p <= '9' && n < sizeof(zeros)) {
++		zeros[n++] = '0';
++		++p;
++	}
++	if (n == 0)
++		return;		/* value already 0 or unparsable */
++
++	if (upoken(tcp, start, n, zeros) != n) {
++		error_msg("anti-anti-debug: failed to rewrite TracerPid "
++			  "in pid %d's status buffer", tcp->pid);
++		return;
++	}
++
++	ext_add_note(tcp, "anti-debug: TracerPid rewritten to 0");
++}
++
++/* Called from ext_tamper_exiting() at the syscall-exit stop. */
++void
++anti_debug_syscall_exiting(struct tcb *tcp)
++{
++	if (!ext.anti_debug || syserror(tcp) || tcp->u_rval <= 0)
++		return;
++
++	kernel_ulong_t buf;
++	size_t len;
++
++	switch (tcp_sysent(tcp)->sen) {
++		case SEN_read:
++		case SEN_pread:
++			buf = tcp->u_arg[1];
++			len = tcp->u_rval;
++			break;
++		case SEN_readv: {
++			/*
++			 * Native-personality iovec layout only; compat
++			 * (32-bit tracee) layouts are not rewritten.
++			 */
++			struct { kernel_ulong_t base; kernel_ulong_t len; } iov;
++
++			if (umoven(tcp, tcp->u_arg[1], sizeof(iov), &iov) < 0)
++				return;
++			buf = iov.base;
++			len = MIN((kernel_ulong_t) tcp->u_rval, iov.len);
++			break;
++		}
++		default:
++			return;
++	}
++
++	if (buf == 0 || len > UINT_MAX)
++		return;
++
++	char fdpath[PATH_MAX + 1];
++
++	if (getfdpath(tcp, (int) tcp->u_arg[0], fdpath, sizeof(fdpath)) < 0)
++		return;
++	if (!path_is_proc_status(fdpath))
++		return;
++
++	rewrite_tracerpid(tcp, buf, len);
++}
+diff --git a/src/defs.h b/src/defs.h
+index 91aa32c08..bc25d7f53 100644
+--- a/src/defs.h
++++ b/src/defs.h
+@@ -262,6 +262,10 @@ struct inject_opts {
+ # define MAX_ERRNO_VALUE			4095
+ 
+ /* Trace Control Block */
++/* strace-appimage tracing extension limits (see tracing_ext.h) */
++# define EXT_MAX_PATHS_PER_SYSCALL 4
++# define EXT_MAX_NOTES_PER_SYSCALL 4
++
+ struct tcb {
+ 	int flags;		/* See below for TCB_ values */
+ 	int pid;		/* If 0, this tcb is free */
+@@ -293,6 +297,17 @@ struct tcb {
+ 	struct timespec etime;	/* Syscall entry time (CLOCK_MONOTONIC) */
+ 	struct timespec delay_expiration_time; /* When does the delay end */
+ 
++	/*
++	 * strace-appimage tracing extensions (see tracing_ext.h):
++	 * paths captured for the syscall being decoded, human notes for it,
++	 * and the remaining --keep-alive budget of this process.
++	 */
++	char *ext_paths[EXT_MAX_PATHS_PER_SYSCALL];
++	unsigned int ext_npaths;
++	char *ext_notes[EXT_MAX_NOTES_PER_SYSCALL];
++	unsigned int ext_nnotes;
++	int keepalive_left;
++
+ 	/*
+ 	 * The ID of the PID namespace of this process
+ 	 * (inode number of /proc/<pid>/ns/pid)
+@@ -372,6 +387,8 @@ struct tcb {
+ 						 * attached.
+ 						 */
+ # define TCP_AFTER_KVM_RUN		0x80000	/* The process has returned from KVM_RUN ioctl */
++# define TCB_EXT_KEEPALIVE_SKIP		0x100000	/* strace-appimage: this exit_group was
++					   suppressed by --keep-alive */
+ 
+ /* qualifier flags */
+ # define QUAL_TRACE	0x001	/* this system call should be traced */
+@@ -1800,7 +1817,9 @@ extern void tprints_comment(const char *str);
+ /*
+  * Staging output for status qualifier.
+  */
++extern FILE *shared_log;	/* log file (stderr by default) */
+ extern FILE *strace_open_memstream(struct tcb *tcp);
++extern const char *strace_staged_output(struct tcb *tcp);
+ extern void strace_close_memstream(struct tcb *tcp, bool publish);
+ 
+ static inline void
+diff --git a/src/file_report.c b/src/file_report.c
+new file mode 100644
+index 000000000..c76a7fef1
+--- /dev/null
++++ b/src/file_report.c
+@@ -0,0 +1,364 @@
++/*
++ * file_report.c -- end-of-run report of every path the tracees touched.
++ *
++ * This is the strace-appimage replacement for the LD_DEBUG=libs scraping
++ * that AppImage packaging scripts do today: instead of trusting the
++ * dynamic loader to report what it mapped (which sees nothing for static
++ * binaries and nothing for files opened outside ld.so), the tracer
++ * records every path argument it decoded, per operation, with the
++ * outcome, and prints a report a packager (or an agent) can act on.
++ *
++ * Copyright (c) 2026 The strace-appimage authors.
++ * SPDX-License-Identifier: LGPL-2.1-or-later
++ */
++
++#include "defs.h"
++#include "tracing_ext.h"
++
++#include <stdlib.h>
++#include <sys/stat.h>
++
++/*
++ * Operation classes.  The syscall name is the source of truth; these
++ * tables only group names that mean the same thing to a packager.
++ */
++static const char *const op_open[] = {
++	"open", "openat", "openat2", "creat", NULL
++};
++static const char *const op_exec[] = {
++	"execve", "execveat", "execv", NULL
++};
++static const char *const op_stat[] = {
++	"stat", "stat64", "lstat", "lstat64", "newfstatat", "fstatat64",
++	"statx", "statfs", "statfs64", "statmount", "access", "faccessat",
++	"faccessat2", "readlink", "readlinkat", "uselib", NULL
++};
++static const char *const op_unlink[] = {
++	"unlink", "unlinkat", "rmdir", NULL
++};
++static const char *const op_mkdir[] = {
++	"mkdir", "mkdirat", NULL
++};
++static const char *const op_rename[] = {
++	"rename", "renameat", "renameat2", NULL
++};
++static const char *const op_link[] = {
++	"link", "linkat", NULL
++};
++static const char *const op_symlink[] = {
++	"symlink", "symlinkat", NULL
++};
++static const char *const op_mknod[] = {
++	"mknod", "mknodat", NULL
++};
++static const char *const op_chmod[] = {
++	"chmod", "fchmodat", "fchmodat2", NULL
++};
++static const char *const op_chown[] = {
++	"chown", "lchown", "chown32", "lchown32", "fchownat", NULL
++};
++static const char *const op_truncate[] = {
++	"truncate", "truncate64", NULL
++};
++static const char *const op_xattr[] = {
++	"setxattr", "lsetxattr", "fsetxattr", "removexattr", "lremovexattr",
++	"fremovexattr", NULL
++};
++static const char *const op_socket[] = {
++	"connect", "bind", NULL
++};
++static const char *const op_chdir[] = {
++	"chdir", NULL
++};
++
++struct op_group {
++	const char *name;
++	const char *const *syscalls;
++};
++
++static const struct op_group op_groups[] = {
++	{ "open", op_open },
++	{ "exec", op_exec },
++	{ "stat", op_stat },
++	{ "unlink", op_unlink },
++	{ "mkdir", op_mkdir },
++	{ "rename", op_rename },
++	{ "link", op_link },
++	{ "symlink", op_symlink },
++	{ "mknod", op_mknod },
++	{ "chmod", op_chmod },
++	{ "chown", op_chown },
++	{ "truncate", op_truncate },
++	{ "xattr", op_xattr },
++	{ "socket", op_socket },
++	{ "chdir", op_chdir },
++};
++
++#define REPORT_OPS_MAX (int) ARRAY_SIZE(op_groups)
++
++struct report_op {
++	int group;		/* index into op_groups */
++	unsigned long n;	/* total attempts */
++	unsigned long ok;	/* successful attempts */
++	unsigned long last_errno;
++};
++
++struct report_entry {
++	struct report_entry *next;
++	char *path;
++	unsigned int hash;
++	struct report_op ops[REPORT_OPS_MAX];
++	unsigned int nops;
++	pid_t first_pid;
++	bool library;
++};
++
++#define REPORT_HASH_SIZE 8192
++static struct report_entry *report_hash[REPORT_HASH_SIZE];
++static unsigned long report_nentries;
++
++static unsigned int
++str_hash(const char *s)
++{
++	unsigned int h = 5381;
++
++	while (*s)
++		h = h * 33 + (unsigned char) *s++;
++	return h;
++}
++
++static bool
++path_looks_like_library(const char *path)
++{
++	const char *base = strrchr(path, '/');
++
++	base = base ? base + 1 : path;
++	return strstr(base, ".so") != NULL;
++}
++
++static struct report_op *
++entry_get_op(struct report_entry *e, int group)
++{
++	for (unsigned int i = 0; i < e->nops; ++i)
++		if (e->ops[i].group == group)
++			return &e->ops[i];
++	if (e->nops >= REPORT_OPS_MAX)
++		return NULL;
++	e->ops[e->nops].group = group;
++	return &e->ops[e->nops++];
++}
++
++static void
++report_note(const char *path, int group, pid_t pid, bool ok,
++	    unsigned long err)
++{
++	const unsigned int h = str_hash(path) % REPORT_HASH_SIZE;
++	struct report_entry *e;
++
++	for (e = report_hash[h]; e; e = e->next)
++		if (strcmp(e->path, path) == 0)
++			break;
++	if (!e) {
++		e = xcalloc(1, sizeof(*e));
++		e->path = xstrdup(path);
++		e->hash = h;
++		e->first_pid = pid;
++		e->library = path_looks_like_library(path);
++		e->next = report_hash[h];
++		report_hash[h] = e;
++		++report_nentries;
++	}
++
++	struct report_op *o = entry_get_op(e, group);
++	if (!o)
++		return;
++	++o->n;
++	if (ok)
++		++o->ok;
++	else
++		o->last_errno = err;
++}
++
++/* Called from syscall_exiting_trace() for every published syscall. */
++void
++file_report_note_syscall(struct tcb *tcp)
++{
++	if (!ext.report_files || tcp->ext_npaths == 0)
++		return;
++
++	const char *const name = tcp_sysent(tcp)->sys_name;
++
++	for (int i = 0; i < REPORT_OPS_MAX; ++i)
++		for (const char *const *p = op_groups[i].syscalls; *p; ++p)
++			if (strcmp(*p, name) == 0) {
++				for (unsigned int k = 0;
++				     k < tcp->ext_npaths; ++k)
++					report_note(tcp->ext_paths[k], i,
++						     tcp->pid, !tcp->u_error,
++						     tcp->u_error);
++				return;
++			}
++}
++
++static int
++entry_cmp(const void *a, const void *b)
++{
++	const struct report_entry *const *ea = a;
++	const struct report_entry *const *eb = b;
++
++	return strcmp((*ea)->path, (*eb)->path);
++}
++
++static struct report_entry **
++collect_entries(void)
++{
++	struct report_entry **arr;
++
++	if (report_nentries == 0)
++		return NULL;
++	arr = xmalloc(report_nentries * sizeof(*arr));
++	unsigned long j = 0;
++	for (unsigned int i = 0; i < REPORT_HASH_SIZE; ++i)
++		for (struct report_entry *e = report_hash[i]; e; e = e->next)
++			arr[j++] = e;
++	qsort(arr, report_nentries, sizeof(*arr), entry_cmp);
++	return arr;
++}
++
++static bool
++is_display_or_device_probe(const char *path)
++{
++	return strncmp(path, "/tmp/.X11-unix/", 15) == 0
++	       || strncmp(path, "/dev/dri/", 9) == 0
++	       || strncmp(path, "/dev/fb", 7) == 0
++	       || strncmp(path, "/dev/snd/", 9) == 0
++	       || strncmp(path, "/dev/video", 10) == 0
++	       || strncmp(path, "/dev/accel/", 11) == 0;
++}
++
++static void
++print_op_json(FILE *fp, const struct report_op *o, bool comma)
++{
++	const char *name = o->last_errno < nerrnos
++			   ? errnoent[o->last_errno] : NULL;
++
++	fprintf(fp, "%s\"%s\":{\"n\":%lu,\"ok\":%lu",
++		comma ? "," : "", op_groups[o->group].name, o->n, o->ok);
++	if (o->last_errno) {
++		if (name)
++			fprintf(fp, ",\"last_errno\":\"%s\"", name);
++		else
++			fprintf(fp, ",\"last_errno\":\"ERRNO_%lu\"",
++				o->last_errno);
++	}
++	fputs("}", fp);
++}
++
++static void
++file_report_dump_json(FILE *fp)
++{
++	struct report_entry **arr = collect_entries();
++
++	fputs("{\"type\":\"file_report\",\"entries\":{", fp);
++	if (arr) {
++		for (unsigned long i = 0; i < report_nentries; ++i) {
++			struct report_entry *e = arr[i];
++
++			if (i)
++				fputc(',', fp);
++			ext_json_print_string(fp, e->path);
++			fprintf(fp, "\":{\"library\":%s,\"first_pid\":%d,"
++				   "\"ops\":{", e->library ? "true" : "false",
++				e->first_pid);
++			for (unsigned int j = 0; j < e->nops; ++j)
++				print_op_json(fp, &e->ops[j], j > 0);
++			fputs("}}", fp);
++		}
++	}
++
++	fputs("},\"hints\":[", fp);
++	if (arr) {
++		bool first = true;
++
++		for (unsigned long i = 0; i < report_nentries; ++i) {
++			struct report_entry *e = arr[i];
++			unsigned long fails = 0;
++
++			for (unsigned int j = 0; j < e->nops; ++j)
++				fails += e->ops[j].n - e->ops[j].ok;
++			if (fails == 0)
++				continue;
++			if (is_display_or_device_probe(e->path)) {
++				fprintf(fp, "%s{\"hint\":"
++					   "\"missing_display_or_device\","
++					   "\"path\":\"%s\",\"attempts\":%lu}",
++					first ? "" : ",", e->path, fails);
++				first = false;
++			}
++		}
++	}
++	fputs("]}\n", fp);
++	free(arr);
++}
++
++static void
++file_report_dump_text(FILE *fp)
++{
++	struct report_entry **arr = collect_entries();
++
++	fputs("# strace-appimage file report\n", fp);
++	fputs("# PATH [L=library] OP(n/ok,last-errno)...\n", fp);
++	if (arr) {
++		for (unsigned long i = 0; i < report_nentries; ++i) {
++			struct report_entry *e = arr[i];
++
++			fprintf(fp, "%s%s\t", e->path,
++				e->library ? " [L]" : "");
++			for (unsigned int j = 0; j < e->nops; ++j) {
++				const struct report_op *o = &e->ops[j];
++
++				fprintf(fp, "%s%s(%lu/%lu",
++					j ? " " : "",
++					op_groups[o->group].name, o->n,
++					o->ok);
++				if (o->last_errno)
++					fprintf(fp, ",E%lu", o->last_errno);
++				fputs(")", fp);
++			}
++			fputc('\n', fp);
++		}
++	}
++	free(arr);
++}
++
++void
++file_report_dump(FILE *out_fp)
++{
++	FILE *fp = out_fp ?: shared_log;
++
++	if (!ext.report_files)
++		return;
++
++	if (ext.json)
++		file_report_dump_json(fp);
++	else
++		file_report_dump_text(fp);
++}
++
++void
++file_report_free(void)
++{
++	for (unsigned int i = 0; i < REPORT_HASH_SIZE; ++i) {
++		struct report_entry *e = report_hash[i];
++
++		while (e) {
++			struct report_entry *next = e->next;
++
++			free(e->path);
++			free(e);
++			e = next;
++		}
++		report_hash[i] = NULL;
++	}
++	report_nentries = 0;
++}
+diff --git a/src/json_out.c b/src/json_out.c
+new file mode 100644
+index 000000000..dc9236a9c
+--- /dev/null
++++ b/src/json_out.c
+@@ -0,0 +1,254 @@
++/*
++ * json_out.c -- machine-readable (JSON Lines) output for strace-appimage.
++ *
++ * One self-contained JSON object per line, so that agents and ordinary
++ * tooling (jq, grep, python) can consume the trace without a custom
++ * parser.  The classic decoded line is preserved verbatim in the "line"
++ * field; the interesting parts of it are additionally exposed as typed
++ * fields (syscall name, paths, fd, return value, errno name, duration).
++ *
++ * Copyright (c) 2026 The strace-appimage authors.
++ * SPDX-License-Identifier: LGPL-2.1-or-later
++ */
++
++#include "defs.h"
++#include "tracing_ext.h"
++
++#include <limits.h>
++#include <time.h>
++#include <sys/utsname.h>
++
++struct tracing_ext_state ext;
++
++static unsigned long json_event_count;
++static unsigned long json_error_events;
++
++static void
++json_print_string_strip_nl(FILE *fp, const char *s)
++{
++	char *copy = xstrdup(s);
++	size_t len = strlen(copy);
++	while (len > 0 && copy[len - 1] == '\n')
++		copy[--len] = '\0';
++	ext_json_print_string(fp, copy);
++	free(copy);
++}
++
++/* Print a timespec duration in microseconds, without a trailing comma. */
++static void
++json_print_dur_us(FILE *fp, const struct timespec *ts)
++{
++	unsigned long long us = (unsigned long long) ts->tv_sec * 1000000
++				+ ts->tv_nsec / 1000;
++	fprintf(fp, "%llu", us);
++}
++
++void
++json_emit_begin(int argc, char **argv)
++{
++	FILE *fp = shared_log;
++
++	if (!ext.json)
++		return;
++
++	struct utsname uts;
++
++	uname(&uts);
++	fprintf(fp, "{\"type\":\"begin\",\"tool\":\"strace-appimage\","
++		   "\"strace_version\":\"%s\",\"kernel\":\"%s\","
++		   "\"argv\":[", PACKAGE_VERSION, uts.release);
++	for (int i = 0; i < argc && argv[i]; ++i) {
++		if (i)
++			fputc(',', fp);
++		ext_json_print_string(fp, argv[i]);
++	}
++	fputs("]}\n", fp);
++}
++
++/*
++ * Emit one JSON event for the syscall that just finished.  Called from
++ * syscall_exiting_trace() with the staged classic output still open, so
++ * the full decoded line is available verbatim.  When the syscall failed
++ * to decode (res != 1 in the caller), ts may be NULL.
++ */
++void
++json_emit_syscall_event(struct tcb *tcp, const struct timespec *ts)
++{
++	FILE *fp = shared_log;
++	const struct_sysent *ent = tcp_sysent(tcp);
++
++	if (!ext.json)
++		return;
++
++	++json_event_count;
++	if (tcp->u_error)
++		++json_error_events;
++
++	fprintf(fp, "{\"type\":\"syscall\",\"pid\":%d,\"syscall\":",
++		tcp->pid);
++	ext_json_print_string(fp, ent->sys_name);
++
++	/* Raw syscall arguments, in order, as unsigned numbers. */
++	fputs(",\"args\":[", fp);
++	for (unsigned int i = 0; i < MAX_ARGS; ++i) {
++		if (i)
++			fputc(',', fp);
++		fprintf(fp, "%" PRI_klu, tcp->u_arg[i]);
++	}
++	fputc(']', fp);
++
++	/* Paths captured while decoding this syscall. */
++	if (tcp->ext_npaths > 0) {
++		fputs(",\"paths\":[", fp);
++		for (unsigned int i = 0; i < tcp->ext_npaths; ++i) {
++			if (i)
++				fputc(',', fp);
++			ext_json_print_string(fp, tcp->ext_paths[i]);
++		}
++		fputc(']', fp);
++	}
++
++	/* Return value and errno. */
++	if (tcp->u_error) {
++		const char *name = tcp->u_error < nerrnos
++				   ? errnoent[tcp->u_error] : NULL;
++		char buf[64];
++
++		if (!name) {
++			snprintf(buf, sizeof(buf), "ERRNO_%lu",
++				 tcp->u_error);
++			name = buf;
++		}
++		fprintf(fp, ",\"ret\":%" PRI_kld ",\"errno\":",
++			(kernel_long_t) tcp->u_rval);
++		ext_json_print_string(fp, name);
++	} else {
++		fprintf(fp, ",\"ret\":%" PRI_kld ",\"errno\":null",
++			tcp->u_rval);
++	}
++
++	/* Duration, when it was measured. */
++	if (ts) {
++		struct timespec dur;
++
++		ts_sub(&dur, ts, &tcp->etime);
++		fputs(",\"dur_us\":", fp);
++		json_print_dur_us(fp, &dur);
++	}
++
++	/* Wall-clock time of the event. */
++	{
++		struct timespec now;
++
++		clock_gettime(CLOCK_REALTIME, &now);
++		fprintf(fp, ",\"time\":%lld.%06ld",
++			(long long) now.tv_sec, now.tv_nsec / 1000);
++	}
++
++	/*
++	 * For syscalls whose decoder declared an fd return value
++	 * (RVAL_FD), resolve the fresh fd to a path.
++	 */
++	if (!tcp->u_error && tcp->u_rval >= 0 &&
++	    tcp->u_rval <= INT_MAX && tcp->ext_npaths > 0 &&
++	    (tcp->sys_func_rval & RVAL_MASK) == RVAL_FD) {
++		char fdpath[PATH_MAX + 1];
++
++		if (getfdpath(tcp, (int) tcp->u_rval, fdpath,
++			      sizeof(fdpath)) >= 0) {
++			fputs(",\"fd\":", fp);
++			fprintf(fp, "%" PRI_kld, tcp->u_rval);
++			fputs(",\"fd_path\":", fp);
++			ext_json_print_string(fp, fdpath);
++		}
++	}
++
++	/* The classic strace line, verbatim minus the trailing newline. */
++	{
++		const char *staged = strace_staged_output(tcp);
++
++		if (staged) {
++			fputs(",\"line\":", fp);
++			json_print_string_strip_nl(fp, staged);
++		}
++	}
++
++	/* Extension notes (keep-alive, anti-debug actions, ...). */
++	if (tcp->ext_nnotes > 0) {
++		fputs(",\"notes\":[", fp);
++		for (unsigned int i = 0; i < tcp->ext_nnotes; ++i) {
++			if (i)
++				fputc(',', fp);
++			ext_json_print_string(fp, tcp->ext_notes[i]);
++		}
++		fputc(']', fp);
++	}
++
++	fputs("}\n", fp);
++}
++
++/*
++ * Minimal process-lifecycle events, replacing the classic
++ * "+++ killed by SIG... +++" / "+++ exited with N +++" lines so that a
++ * --json stream stays parseable line by line.  The signal name is
++ * resolved by the caller (strace.c owns sprintsigname()).
++ */
++void
++json_emit_signal_event(struct tcb *tcp, const char *signame, bool coredump)
++{
++	FILE *fp = shared_log;
++
++	if (!ext.json)
++		return;
++
++	++json_event_count;
++	fprintf(fp, "{\"type\":\"signal\",\"pid\":%d,\"signal\":",
++		tcp->pid);
++	ext_json_print_string(fp, signame ?: "SIG?");
++	fprintf(fp, ",\"core_dumped\":%s}\n", coredump ? "true" : "false");
++}
++
++/*
++ * Signal-delivery-stop event (the classic "--- SIG... ---" line),
++ * without the full siginfo decoding (kept minimal for the PoC).
++ */
++void
++json_emit_stop_event(struct tcb *tcp, const char *signame)
++{
++	FILE *fp = shared_log;
++
++	if (!ext.json)
++		return;
++
++	++json_event_count;
++	fprintf(fp, "{\"type\":\"signal\",\"pid\":%d,\"signal\":",
++		tcp->pid);
++	ext_json_print_string(fp, signame ?: "SIG?");
++	fputs(",\"stop\":true}\n", fp);
++}
++
++void
++json_emit_exit_event(struct tcb *tcp, int code)
++{
++	FILE *fp = shared_log;
++
++	if (!ext.json)
++		return;
++
++	++json_event_count;
++	fprintf(fp, "{\"type\":\"exit\",\"pid\":%d,\"code\":%d}\n",
++		tcp->pid, code);
++}
++
++void
++json_emit_summary(void)
++{
++	FILE *fp = shared_log;
++
++	if (!ext.json)
++		return;
++
++	fprintf(fp, "{\"type\":\"summary\",\"events\":%lu,"
++		   "\"events_with_error\":%lu}\n",
++		json_event_count, json_error_events);
++}
+diff --git a/src/sockaddr.c b/src/sockaddr.c
+index 3b5eb3c8a..91282706d 100644
+--- a/src/sockaddr.c
++++ b/src/sockaddr.c
+@@ -11,6 +11,7 @@
+  */
+ 
+ #include "defs.h"
++#include "tracing_ext.h"
+ 
+ #include <sys/socket.h>
+ #include <sys/un.h>
+@@ -122,6 +123,10 @@ print_sockaddr_data_un(struct tcb *tcp, const void *const buf, const int addrlen
+ 		print_quoted_string(sa_un->sun_path, path_len + 1,
+ 				    QUOTE_0_TERMINATED);
+ 		selinux_printfilecon(tcp, sa_un->sun_path);
++		/* strace-appimage: remember abstract-less AF_UNIX socket
++		 * paths for --json / --report-files. */
++		if (extensions_active() && sa_un->sun_path[0] == '/')
++			ext_note_path(tcp, sa_un->sun_path);
+ 	} else {
+ 		tprints_string("@");
+ 		print_quoted_string(sa_un->sun_path + 1, path_len - 1, 0);
+diff --git a/src/stage_output.c b/src/stage_output.c
+index a7c756ead..613927aba 100644
+--- a/src/stage_output.c
++++ b/src/stage_output.c
+@@ -46,6 +46,23 @@ strace_open_memstream(struct tcb *tcp)
+ 	return fp;
+ }
+ 
++/*
++ * Return the text staged for the current syscall, or NULL when no
++ * staging is active.  The buffer belongs to the staged output data and
++ * stays valid until strace_close_memstream(); callers must not free it.
++ * Used by the strace-appimage JSON driver to embed the classic decoded
++ * line verbatim into each JSON event.
++ */
++const char *
++strace_staged_output(struct tcb *tcp)
++{
++	if (!tcp->staged_output_data)
++		return NULL;
++
++	fflush(tcp->outf);
++	return tcp->staged_output_data->memfptr;
++}
++
+ void
+ strace_close_memstream(struct tcb *tcp, bool publish)
+ {
+diff --git a/src/strace.c b/src/strace.c
+index fcd3aa8b3..0a38ca1cb 100644
+--- a/src/strace.c
++++ b/src/strace.c
+@@ -10,6 +10,8 @@
+  */
+ 
+ #include "defs.h"
++#include "string_to_uint.h"
++#include "tracing_ext.h"
+ #include <stdarg.h>
+ #include <limits.h>
+ #include <fcntl.h>
+@@ -170,7 +172,7 @@ enum xlat_style xlat_verbosity = XLAT_STYLE_ABBREV;
+ 
+ static const char *outfname;
+ /* If -ff, points to stderr. Else, it's our common output log */
+-static FILE *shared_log;
++FILE *shared_log;
+ static bool open_append;
+ 
+ struct tcb *printing_tcp;
+@@ -527,7 +529,25 @@ Tampering:\n\
+   -e fault=SET[:error=ERRNO][:when=WHEN], --fault=SET[:error=ERRNO][:when=WHEN]\n\
+                  synonym for -e inject with default ERRNO set to ENOSYS.\n\
+ \n\
+-Miscellaneous:\n\
++strace-appimage extensions:\n\
++  --json         print machine-readable JSON Lines events instead of the\n\
++                 classic trace (one JSON object per line; see\n\
++                 strace-appimage(1))\n\
++  --report-files[=FILE]\n\
++                 at exit, report every path the tracees touched, with the\n\
++                 operations (open, exec, stat, ...) and outcomes; a\n\
++                 drop-in replacement for LD_DEBUG=libs scraping that also\n\
++                 works for static binaries\n\
++  --anti-anti-debug\n\
++                 counter tracee self-checks: spoof ptrace(PTRACE_TRACEME)\n\
++                 results and rewrite TracerPid to 0 in tracee reads of\n\
++                 /proc/<pid>/status\n\
++  --keep-alive[=N]\n\
++                 suppress exit_group up to N times per process (default 3)\n\
++                 so short-lived or display-less runs reveal more calls\n\
++  --packager     preset for AppImage/library packaging: --follow-forks,\n\
++                 --decode-fds=all, --report-files, --keep-alive\n\
++\nMiscellaneous:\n\
+   -d, --debug    enable debug output to stderr\n\
+   -h, --help     print help message\n\
+   --seccomp-bpf  enable seccomp-bpf filtering\n\
+@@ -1074,6 +1094,7 @@ alloctcb(int pid)
+ 			memset(tcp, 0, sizeof(*tcp));
+ 			list_init(&tcp->wait_list);
+ 			tcp->pid = pid;
++			tcp->keepalive_left = ext.keep_alive;
+ 			maybe_load_task_comm(tcp);
+ #if SUPPORTED_PERSONALITIES > 1
+ 			tcp->currpers = current_personality;
+@@ -1139,6 +1160,7 @@ droptcb(struct tcb *tcp)
+ 		free(tcp->inject_vec[p]);
+ 
+ 	free_tcb_priv_data(tcp);
++	ext_free_tcb(tcp);
+ 
+ #ifdef ENABLE_STACKTRACE
+ 	if (stack_trace_mode)
+@@ -2467,6 +2489,11 @@ init(int argc, char *argv[])
+ 		GETOPT_QUAL_DECODE_FD,
+ 		GETOPT_QUAL_DECODE_PID,
+ 		GETOPT_QUAL_SECONTEXT,
++		GETOPT_EXT_JSON,
++		GETOPT_EXT_REPORT_FILES,
++		GETOPT_EXT_ANTI_ANTI_DEBUG,
++		GETOPT_EXT_KEEP_ALIVE,
++		GETOPT_EXT_PACKAGER,
+ 	};
+ 	static const struct option longopts[] = {
+ 		{ "columns",		required_argument, 0, 'a' },
+@@ -2535,6 +2562,15 @@ init(int argc, char *argv[])
+ 		{ "silent",	optional_argument, 0, GETOPT_QUAL_QUIET },
+ 		{ "silence",	optional_argument, 0, GETOPT_QUAL_QUIET },
+ 		{ "decode-fds",	optional_argument, 0, GETOPT_QUAL_DECODE_FD },
++		{ "json",		no_argument,	   0, GETOPT_EXT_JSON },
++		{ "report-files",	optional_argument, 0,
++			GETOPT_EXT_REPORT_FILES },
++		{ "anti-anti-debug",	no_argument,	   0,
++			GETOPT_EXT_ANTI_ANTI_DEBUG },
++		{ "keep-alive",		optional_argument, 0,
++			GETOPT_EXT_KEEP_ALIVE },
++		{ "packager",		no_argument,	   0,
++			GETOPT_EXT_PACKAGER },
+ 		{ "decode-pids",required_argument, 0, GETOPT_QUAL_DECODE_PID },
+ 		{ "secontext",	optional_argument, 0, GETOPT_QUAL_SECONTEXT },
+ 		{ 0, 0, 0, 0 }
+@@ -2592,6 +2628,33 @@ init(int argc, char *argv[])
+ 			if (daemonized_tracer_long <= DAEMONIZE_NONE)
+ 				error_opt_arg(c, lopt, optarg);
+ 			break;
++		case GETOPT_EXT_JSON:
++			ext.json = true;
++			break;
++		case GETOPT_EXT_REPORT_FILES:
++			ext.report_files = true;
++			ext.report_files_set = true;
++			if (optarg && strcmp(optarg, "-") != 0)
++				ext.report_fp = strace_fopen(optarg);
++			break;
++		case GETOPT_EXT_ANTI_ANTI_DEBUG:
++			ext.anti_debug = true;
++			break;
++		case GETOPT_EXT_KEEP_ALIVE: {
++			int val = 3;
++
++			if (optarg) {
++				val = string_to_uint(optarg);
++				if (val < 1 || (unsigned long long) val > INT_MAX)
++					error_opt_arg(c, lopt, optarg);
++			}
++			ext.keep_alive = val;
++			ext.keep_alive_set = true;
++			break;
++		}
++		case GETOPT_EXT_PACKAGER:
++			ext.packager = true;
++			break;
+ 		case 'e':
+ 			qualify(optarg);
+ 			break;
+@@ -2963,6 +3026,24 @@ init(int argc, char *argv[])
+ 		}
+ 	}
+ 
++	/*
++	 * --packager: the strace-appimage preset for AppImage work.
++	 * Everything it enables is still individually overridable later.
++	 */
++	if (ext.packager) {
++		if (!followfork)
++			followfork = true;
++		if (decode_fd_set_updated) {
++			error_msg_and_die("--packager and --decode-fds cannot"
++					  " be provided simultaneously");
++		}
++		qualify_decode_fd("all");
++		if (!ext.report_files_set)
++			ext.report_files = true;
++		if (!ext.keep_alive_set)
++			ext.keep_alive = 3;
++	}
++
+ 	if (followfork_short) {
+ 		if (followfork) {
+ 			error_msg_and_die("-f and --follow-forks cannot"
+@@ -2976,6 +3057,17 @@ init(int argc, char *argv[])
+ 		}
+ 	}
+ 
++	if (ext.json) {
++		if (output_separately)
++			error_msg_and_help("--json and -ff/"
++					   "--output-separately are mutually"
++					   " exclusive");
++		if (cflag == CFLAG_ONLY_STATS)
++			error_msg_and_help("--json has no effect with"
++					   " -c/--summary-only");
++	}
++
++
+ 	if (seccomp_filtering && !followfork) {
+ 		error_msg("--seccomp-bpf cannot be used without"
+ 			  " -f/--follow-forks, disabling");
+@@ -3074,8 +3166,8 @@ init(int argc, char *argv[])
+ 	}
+ 
+ #ifndef HAVE_OPEN_MEMSTREAM
+-	if (!is_complete_set(status_set, NUMBER_OF_STATUSES))
+-		error_msg_and_help("open_memstream is required to use -z, -Z, or -e status");
++	if (!is_complete_set(status_set, NUMBER_OF_STATUSES) || ext.json)
++		error_msg_and_help("open_memstream is required to use -z, -Z, -e status, or --json");
+ #endif
+ 
+ 	if (zflags > 1)
+@@ -3547,7 +3639,8 @@ maybe_switch_tcbs(struct tcb *tcp, const int pid)
+ 	tcp = execve_thread;
+ 	tcp->pid = pid;
+ 	if (cflag != CFLAG_ONLY_STATS) {
+-		if (!is_number_in_set(QUIET_THREAD_EXECVE, quiet_set)) {
++		if (!is_number_in_set(QUIET_THREAD_EXECVE, quiet_set)
++		    && !ext.json) {
+ 			printleader(tcp);
+ 			tprintf_string("+++ superseded by execve in pid %lu +++",
+ 				       old_pid);
+@@ -3587,12 +3680,18 @@ print_signalled(struct tcb *tcp, const int pid, int status)
+ 
+ 	if (cflag != CFLAG_ONLY_STATS
+ 	    && is_number_in_set(WTERMSIG(status), signal_set)) {
+-		printleader(tcp);
+-		tprintf_string("+++ killed by %s %s+++",
+-			       sprintsigname(WTERMSIG(status)),
+-			       WCOREDUMP(status) ? "(core dumped) " : "");
+-		tprint_newline();
+-		line_ended();
++		if (ext.json) {
++			json_emit_signal_event(tcp,
++					       sprintsigname(WTERMSIG(status)),
++					       WCOREDUMP(status));
++		} else {
++			printleader(tcp);
++			tprintf_string("+++ killed by %s %s+++",
++				       sprintsigname(WTERMSIG(status)),
++				       WCOREDUMP(status) ? "(core dumped) " : "");
++			tprint_newline();
++			line_ended();
++		}
+ 	}
+ }
+ 
+@@ -3606,10 +3705,15 @@ print_exited(struct tcb *tcp, const int pid, int status)
+ 
+ 	if (cflag != CFLAG_ONLY_STATS &&
+ 	    !is_number_in_set(QUIET_EXIT, quiet_set)) {
+-		printleader(tcp);
+-		tprintf_string("+++ exited with %d +++", WEXITSTATUS(status));
+-		tprint_newline();
+-		line_ended();
++		if (ext.json) {
++			json_emit_exit_event(tcp, WEXITSTATUS(status));
++		} else {
++			printleader(tcp);
++			tprintf_string("+++ exited with %d +++",
++				       WEXITSTATUS(status));
++			tprint_newline();
++			line_ended();
++		}
+ 	}
+ }
+ 
+@@ -3619,15 +3723,21 @@ print_stopped(struct tcb *tcp, const siginfo_t *si, const unsigned int sig)
+ 	if (cflag != CFLAG_ONLY_STATS
+ 	    && !hide_log(tcp)
+ 	    && is_number_in_set(sig, signal_set)) {
+-		printleader(tcp);
+-		if (si) {
+-			tprintf_string("--- %s ", sprintsigname(sig));
+-			printsiginfo(tcp, si);
+-			tprints_string(" ---");
+-		} else
+-			tprintf_string("--- stopped by %s ---", sprintsigname(sig));
+-		tprint_newline();
+-		line_ended();
++		if (ext.json) {
++			json_emit_stop_event(tcp, sprintsigname(sig));
++		} else {
++			printleader(tcp);
++			if (si) {
++				tprintf_string("--- %s ", sprintsigname(sig));
++				printsiginfo(tcp, si);
++				tprints_string(" ---");
++			} else {
++				tprintf_string("--- stopped by %s ---",
++					       sprintsigname(sig));
++			}
++			tprint_newline();
++			line_ended();
++		}
+ 
+ #ifdef ENABLE_STACKTRACE
+ 		if (stack_trace_mode)
+@@ -4356,6 +4466,12 @@ terminate(void)
+ 	cleanup(sig);
+ 	if (cflag)
+ 		call_summary(shared_log);
++	json_emit_summary();
++	file_report_dump(ext.report_fp);
++	file_report_free();
++	if (ext.report_fp && ext.report_fp != shared_log
++	    && ext.report_fp != stderr)
++		fclose(ext.report_fp);
+ 	fflush(NULL);
+ 	if (shared_log != stderr)
+ 		fclose(shared_log);
+@@ -4399,6 +4515,7 @@ main(int argc, char *argv[])
+ {
+ 	setlocale(LC_ALL, "");
+ 	init(argc, argv);
++	json_emit_begin(argc, argv);
+ 
+ 	exit_code = !nprocs;
+ 
+diff --git a/src/syscall.c b/src/syscall.c
+index bb7c2105e..79ee9c110 100644
+--- a/src/syscall.c
++++ b/src/syscall.c
+@@ -36,6 +36,7 @@
+ #include "scno.h"
+ 
+ #include "regs.h"
++#include "tracing_ext.h"
+ 
+ #if defined(SPARC64)
+ # undef PTRACE_GETREGS
+@@ -578,6 +579,80 @@ tamper_with_syscall_exiting(struct tcb *tcp)
+  * other: error; call syscall_entering_finish(tcp, res), where res is the value
+  *    returned.
+  */
++
++/*
++ * strace-appimage extension hooks.
++ *
++ * ext_syscall_entering_trace(): reset the per-syscall capture state and,
++ * for --keep-alive, skip an exit_group execution (set_scno(-1), the same
++ * mechanism -e inject= uses) so the tracee lives past its N first exits.
++ *
++ * ext_syscall_exiting_tamper(): runs at the syscall-exit stop, before the
++ * return value is decoded and printed: restores success for suppressed
++ * exit_group calls, spoofs ptrace(PTRACE_TRACEME) results for
++ * --anti-anti-debug, and rewrites TracerPid in freshly read
++ * /proc/<pid>/status buffers.
++ *
++ * ext_syscall_published(): called once per syscall whose output is being
++ * published (after -z/-Z status filtering): collects the file report
++ * entry and emits the JSON event.
++ */
++static void
++ext_syscall_entering_trace(struct tcb *tcp)
++{
++	ext_reset_paths(tcp);
++	ext_reset_notes(tcp);
++
++	if (ext.keep_alive > 0 && tcp->keepalive_left > 0
++	    && strcmp(tcp_sysent(tcp)->sys_name, "exit_group") == 0
++	    && set_scno(tcp, -1) >= 0) {
++		tcp->flags |= TCB_EXT_KEEPALIVE_SKIP;
++		--tcp->keepalive_left;
++		ext_add_note(tcp, "keep-alive: exit_group suppressed");
++	}
++}
++
++static void
++ext_syscall_exiting_tamper(struct tcb *tcp, int res)
++{
++	if (!extensions_active())
++		return;
++
++	/*
++	 * The keep-alive flag must be cleared even when the exit could
++	 * not be decoded, or it would leak into the next syscall.
++	 */
++	if (tcp->flags & TCB_EXT_KEEPALIVE_SKIP) {
++		tcp->flags &= ~TCB_EXT_KEEPALIVE_SKIP;
++		set_success(tcp, 0);
++	}
++
++	/* Everything below needs a successfully fetched result. */
++	if (res != 1)
++		return;
++
++	if (ext.anti_debug && tcp_sysent(tcp)->sen == SEN_ptrace
++	    && tcp->u_arg[0] == 0 && tcp->u_error == EPERM) {
++		set_success(tcp, 0);
++		ext_add_note(tcp, "anti-debug: ptrace(PTRACE_TRACEME) "
++			      "spoofed as successful");
++	}
++
++	anti_debug_syscall_exiting(tcp);
++}
++
++static void
++ext_syscall_published(struct tcb *tcp, const struct timespec *ts,
++		      bool publish)
++{
++	if (!extensions_active() || !publish)
++		return;
++
++	file_report_note_syscall(tcp);
++	if (ext.json)
++		json_emit_syscall_event(tcp, ts);
++}
++
+ int
+ syscall_entering_decode(struct tcb *tcp)
+ {
+@@ -654,6 +729,8 @@ syscall_entering_trace(struct tcb *tcp, unsigned int *sig)
+ 	if (inject(tcp))
+ 		tamper_with_syscall_entering(tcp, sig);
+ 
++	ext_syscall_entering_trace(tcp);
++
+ 	if (cflag == CFLAG_ONLY_STATS) {
+ 		return 0;
+ 	}
+@@ -663,7 +740,7 @@ syscall_entering_trace(struct tcb *tcp, unsigned int *sig)
+ 		unwind_tcb_capture(tcp);
+ #endif
+ 
+-	if (!is_complete_set(status_set, NUMBER_OF_STATUSES))
++	if (!is_complete_set(status_set, NUMBER_OF_STATUSES) || ext.json)
+ 		strace_open_memstream(tcp);
+ 
+ 	printleader(tcp);
+@@ -681,7 +758,7 @@ syscall_entering_finish(struct tcb *tcp, int res)
+ 	tcp->sys_func_rval = res;
+ 
+ 	/* Measure the entrance time as late as possible to avoid errors. */
+-	if ((Tflag || cflag) && !filtered(tcp))
++	if ((Tflag || cflag || extensions_active()) && !filtered(tcp))
+ 		clock_gettime(CLOCK_MONOTONIC, &tcp->etime);
+ 
+ 	/* Start tracking system time */
+@@ -714,7 +791,7 @@ int
+ syscall_exiting_decode(struct tcb *tcp, struct timespec *pts)
+ {
+ 	/* Measure the exit time as early as possible to avoid errors. */
+-	if ((Tflag || cflag) && !filtered(tcp))
++	if ((Tflag || cflag || extensions_active()) && !filtered(tcp))
+ 		clock_gettime(CLOCK_MONOTONIC, pts);
+ 
+ 	if (tcp_sysent(tcp)->sys_flags & MEMORY_MAPPING_CHANGE)
+@@ -771,6 +848,13 @@ print_injected_note(struct tcb *tcp)
+ 		tprints_sysret_string("inject", "INJECTED");
+ 	if (syscall_tampered_delayed(tcp))
+ 		tprints_sysret_string("delay", "DELAYED");
++
++	if (tcp->ext_nnotes > 0 && !ext.json) {
++		const char *notes = ext_notes_joined(tcp, ';');
++
++		if (*notes)
++			tprints_sysret_string("notes", notes);
++	}
+ }
+ 
+ static void
+@@ -791,6 +875,8 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
+ 	    inject_poke_exit(tcp))
+ 		tamper_with_syscall_exiting(tcp);
+ 
++	ext_syscall_exiting_tamper(tcp, res);
++
+ 	if (cflag != CFLAG_ONLY_STATS)
+ 		print_syscall_resume(tcp);
+ 
+@@ -820,6 +906,8 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
+ 			tprint_newline();
+ 			if (status_filtering)
+ 				strace_close_memstream(tcp, publish);
++			else if (ext.json)
++				strace_close_memstream(tcp, false);
+ 			line_ended();
+ 		}
+ #ifdef ENABLE_STACKTRACE
+@@ -847,8 +935,10 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
+ 			       && is_number_in_set(STATUS_FAILED, status_set);
+ 		publish |= !syserror(tcp)
+ 			   && is_number_in_set(STATUS_SUCCESSFUL, status_set);
+-		if (cflag != CFLAG_ONLY_STATS)
+-			strace_close_memstream(tcp, publish);
++		if (cflag != CFLAG_ONLY_STATS) {
++			ext_syscall_published(tcp, ts, publish);
++			strace_close_memstream(tcp, publish && !ext.json);
++		}
+ 		if (!publish) {
+ 			if (cflag != CFLAG_ONLY_STATS)
+ 				line_ended();
+@@ -1028,6 +1118,10 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
+ 	dumpio(tcp);
+ 	line_ended();
+ 
++	ext_syscall_published(tcp, ts, true);
++	if (ext.json)
++		strace_close_memstream(tcp, false);
++
+ #ifdef ENABLE_STACKTRACE
+ 	if (stack_trace_mode)
+ 		unwind_tcb_print(tcp);
+diff --git a/src/tracing_ext.c b/src/tracing_ext.c
+new file mode 100644
+index 000000000..1ea9824ba
+--- /dev/null
++++ b/src/tracing_ext.c
+@@ -0,0 +1,124 @@
++/*
++ * tracing_ext.c -- shared state and per-syscall capture helpers for the
++ * strace-appimage tracing extensions (see tracing_ext.h).
++ *
++ * Copyright (c) 2026 The strace-appimage authors.
++ * SPDX-License-Identifier: LGPL-2.1-or-later
++ */
++
++#include "defs.h"
++#include "tracing_ext.h"
++
++#include <stdio.h>
++
++/*
++ * Print a JSON string literal (with the surrounding quotes) into fp,
++ * escaping what must be escaped.  strace output can contain arbitrary
++ * tracee bytes, so escape strictly per RFC 8259 and switch to \uXXXX
++ * for anything not safely printable.  Shared by the --json event
++ * emitter and the --report-files dump.
++ */
++void
++ext_json_print_string(FILE *fp, const char *s)
++{
++	fputc('"', fp);
++	for (const unsigned char *p = (const unsigned char *) s; *p; ++p) {
++		switch (*p) {
++		case '"':
++			fputs("\\\"", fp);
++			break;
++		case '\\':
++			fputs("\\\\", fp);
++			break;
++		case '\b':
++			fputs("\\b", fp);
++			break;
++		case '\f':
++			fputs("\\f", fp);
++			break;
++		case '\n':
++			fputs("\\n", fp);
++			break;
++		case '\r':
++			fputs("\\r", fp);
++			break;
++		case '\t':
++			fputs("\\t", fp);
++			break;
++		default:
++			if (*p < 0x20 || *p == 0x7f)
++				fprintf(fp, "\\u%04x", *p);
++			else
++				fputc(*p, fp);
++		}
++	}
++	fputc('"', fp);
++}
++
++void
++ext_reset_paths(struct tcb *tcp)
++{
++	for (unsigned int i = 0; i < tcp->ext_npaths && i < EXT_MAX_PATHS_PER_SYSCALL; ++i) {
++		free(tcp->ext_paths[i]);
++		tcp->ext_paths[i] = NULL;
++	}
++	tcp->ext_npaths = 0;
++}
++
++void
++ext_note_path(struct tcb *tcp, const char *path)
++{
++	if (tcp->ext_npaths >= EXT_MAX_PATHS_PER_SYSCALL)
++		return;
++	tcp->ext_paths[tcp->ext_npaths++] = xstrdup(path);
++}
++
++void
++ext_reset_notes(struct tcb *tcp)
++{
++	for (unsigned int i = 0; i < tcp->ext_nnotes && i < EXT_MAX_NOTES_PER_SYSCALL; ++i) {
++		free(tcp->ext_notes[i]);
++		tcp->ext_notes[i] = NULL;
++	}
++	tcp->ext_nnotes = 0;
++}
++
++void
++ext_add_note(struct tcb *tcp, const char *note)
++{
++	if (tcp->ext_nnotes >= EXT_MAX_NOTES_PER_SYSCALL)
++		return;
++	tcp->ext_notes[tcp->ext_nnotes++] = xstrdup(note);
++}
++
++const char *
++ext_notes_joined(struct tcb *tcp, char sep)
++{
++	static char buf[256];
++	size_t off = 0;
++
++	buf[0] = '\0';
++	for (unsigned int i = 0; i < tcp->ext_nnotes; ++i) {
++		if (i) {
++			if (off + 1 >= sizeof(buf))
++				break;
++			buf[off++] = sep;
++			buf[off] = '\0';
++		}
++		size_t l = strlen(tcp->ext_notes[i]);
++		if (off + l >= sizeof(buf))
++			l = sizeof(buf) - 1 - off;
++		memcpy(buf + off, tcp->ext_notes[i], l);
++		off += l;
++		buf[off] = '\0';
++	}
++	return buf;
++}
++
++/* Free everything a tcb holds for the extensions; called from droptcb(). */
++void
++ext_free_tcb(struct tcb *tcp)
++{
++	ext_reset_paths(tcp);
++	ext_reset_notes(tcp);
++}
+diff --git a/src/tracing_ext.h b/src/tracing_ext.h
+new file mode 100644
+index 000000000..694408711
+--- /dev/null
++++ b/src/tracing_ext.h
+@@ -0,0 +1,69 @@
++/*
++ * tracing_ext.h -- strace-appimage tracing extensions.
++ *
++ * Shared state and helpers for the packager-oriented extensions:
++ *   --json               machine-readable (JSON Lines) event stream
++ *   --report-files[=F]   end-of-run report of every path the tracees touched
++ *   --anti-anti-debug    spoof ptrace(PTRACE_TRACEME) results and hide
++ *                        TracerPid in reads of /proc/<pid>/status
++ *   --keep-alive[=N]     suppress exit_group up to N times per process
++ *   --packager           preset combining the above for AppImage work
++ *
++ * Copyright (c) 2026 The strace-appimage authors.
++ * SPDX-License-Identifier: LGPL-2.1-or-later
++ */
++
++#ifndef STRACE_TRACING_EXT_H
++# define STRACE_TRACING_EXT_H
++
++# include "defs.h"
++
++/* Global extension state, set up during option parsing. */
++struct tracing_ext_state {
++	bool json;		/* --json */
++	bool report_files;	/* --report-files */
++	bool anti_debug;	/* --anti-anti-debug */
++	bool packager;		/* --packager (preset) */
++	int keep_alive;		/* --keep-alive=N (0 = off) */
++	bool keep_alive_set;	/* --keep-alive given explicitly */
++	bool report_files_set;	/* --report-files given explicitly */
++	FILE *report_fp;	/* report destination (NULL = shared log) */
++};
++
++extern struct tracing_ext_state ext;
++
++static inline bool
++extensions_active(void)
++{
++	return ext.json || ext.report_files || ext.anti_debug
++	       || ext.keep_alive > 0;
++}
++
++/* Per-syscall path capture (fed from printpathn and friends). */
++void ext_reset_paths(struct tcb *tcp);
++void ext_note_path(struct tcb *tcp, const char *path);
++/* Per-syscall human notes, emitted in JSON events and classic output. */
++void ext_reset_notes(struct tcb *tcp);
++void ext_add_note(struct tcb *tcp, const char *note);
++const char *ext_notes_joined(struct tcb *tcp, char sep);
++/* Per-tcb teardown; called from droptcb(). */
++void ext_free_tcb(struct tcb *tcp);
++/* Shared RFC 8259 string escaper (json events and file report). */
++void ext_json_print_string(FILE *fp, const char *s);
++
++/* json_out.c */
++void json_emit_begin(int argc, char **argv);
++void json_emit_syscall_event(struct tcb *tcp, const struct timespec *ts);
++void json_emit_signal_event(struct tcb *tcp, const char *signame,
++			    bool coredump);
++void json_emit_stop_event(struct tcb *tcp, const char *signame);
++void json_emit_exit_event(struct tcb *tcp, int code);
++void json_emit_summary(void);
++/* file_report.c */
++void file_report_note_syscall(struct tcb *tcp);
++void file_report_dump(FILE *out_fp);
++void file_report_free(void);
++/* anti_debug.c */
++void anti_debug_syscall_exiting(struct tcb *tcp);
++
++#endif /* !STRACE_TRACING_EXT_H */
+diff --git a/src/util.c b/src/util.c
+index 7515ebb3e..6a3727441 100644
+--- a/src/util.c
++++ b/src/util.c
+@@ -13,6 +13,7 @@
+  */
+ 
+ #include "defs.h"
++#include "tracing_ext.h"
+ #include <limits.h>
+ #include <fcntl.h>
+ #include <stdarg.h>
+@@ -1398,6 +1399,11 @@ printpathn(struct tcb *const tcp, const kernel_ulong_t addr, unsigned int n)
+ 
+ 		if (nul_seen)
+ 			selinux_printfilecon(tcp, path);
++
++		/* strace-appimage: remember the decoded path for
++		 * --json / --report-files. */
++		if (extensions_active() && path[0] == '/')
++			ext_note_path(tcp, path);
+ 	}
+ 
+ 	return nul_seen;
+-- 
+2.55.0
+
