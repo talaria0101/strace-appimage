@@ -10,6 +10,8 @@
  */
 
 #include "defs.h"
+#include "string_to_uint.h"
+#include "tracing_ext.h"
 #include <stdarg.h>
 #include <limits.h>
 #include <fcntl.h>
@@ -170,7 +172,7 @@ enum xlat_style xlat_verbosity = XLAT_STYLE_ABBREV;
 
 static const char *outfname;
 /* If -ff, points to stderr. Else, it's our common output log */
-static FILE *shared_log;
+FILE *shared_log;
 static bool open_append;
 
 struct tcb *printing_tcp;
@@ -527,7 +529,25 @@ Tampering:\n\
   -e fault=SET[:error=ERRNO][:when=WHEN], --fault=SET[:error=ERRNO][:when=WHEN]\n\
                  synonym for -e inject with default ERRNO set to ENOSYS.\n\
 \n\
-Miscellaneous:\n\
+strace-appimage extensions:\n\
+  --json         print machine-readable JSON Lines events instead of the\n\
+                 classic trace (one JSON object per line; see\n\
+                 strace-appimage(1))\n\
+  --report-files[=FILE]\n\
+                 at exit, report every path the tracees touched, with the\n\
+                 operations (open, exec, stat, ...) and outcomes; a\n\
+                 drop-in replacement for LD_DEBUG=libs scraping that also\n\
+                 works for static binaries\n\
+  --anti-anti-debug\n\
+                 counter tracee self-checks: spoof ptrace(PTRACE_TRACEME)\n\
+                 results and rewrite TracerPid to 0 in tracee reads of\n\
+                 /proc/<pid>/status\n\
+  --keep-alive[=N]\n\
+                 suppress exit_group up to N times per process (default 3)\n\
+                 so short-lived or display-less runs reveal more calls\n\
+  --packager     preset for AppImage/library packaging: --follow-forks,\n\
+                 --decode-fds=all, --report-files, --keep-alive\n\
+\nMiscellaneous:\n\
   -d, --debug    enable debug output to stderr\n\
   -h, --help     print help message\n\
   --seccomp-bpf  enable seccomp-bpf filtering\n\
@@ -1074,6 +1094,7 @@ alloctcb(int pid)
 			memset(tcp, 0, sizeof(*tcp));
 			list_init(&tcp->wait_list);
 			tcp->pid = pid;
+			tcp->keepalive_left = ext.keep_alive;
 			maybe_load_task_comm(tcp);
 #if SUPPORTED_PERSONALITIES > 1
 			tcp->currpers = current_personality;
@@ -1139,6 +1160,7 @@ droptcb(struct tcb *tcp)
 		free(tcp->inject_vec[p]);
 
 	free_tcb_priv_data(tcp);
+	ext_free_tcb(tcp);
 
 #ifdef ENABLE_STACKTRACE
 	if (stack_trace_mode)
@@ -2467,6 +2489,11 @@ init(int argc, char *argv[])
 		GETOPT_QUAL_DECODE_FD,
 		GETOPT_QUAL_DECODE_PID,
 		GETOPT_QUAL_SECONTEXT,
+		GETOPT_EXT_JSON,
+		GETOPT_EXT_REPORT_FILES,
+		GETOPT_EXT_ANTI_ANTI_DEBUG,
+		GETOPT_EXT_KEEP_ALIVE,
+		GETOPT_EXT_PACKAGER,
 	};
 	static const struct option longopts[] = {
 		{ "columns",		required_argument, 0, 'a' },
@@ -2535,6 +2562,15 @@ init(int argc, char *argv[])
 		{ "silent",	optional_argument, 0, GETOPT_QUAL_QUIET },
 		{ "silence",	optional_argument, 0, GETOPT_QUAL_QUIET },
 		{ "decode-fds",	optional_argument, 0, GETOPT_QUAL_DECODE_FD },
+		{ "json",		no_argument,	   0, GETOPT_EXT_JSON },
+		{ "report-files",	optional_argument, 0,
+			GETOPT_EXT_REPORT_FILES },
+		{ "anti-anti-debug",	no_argument,	   0,
+			GETOPT_EXT_ANTI_ANTI_DEBUG },
+		{ "keep-alive",		optional_argument, 0,
+			GETOPT_EXT_KEEP_ALIVE },
+		{ "packager",		no_argument,	   0,
+			GETOPT_EXT_PACKAGER },
 		{ "decode-pids",required_argument, 0, GETOPT_QUAL_DECODE_PID },
 		{ "secontext",	optional_argument, 0, GETOPT_QUAL_SECONTEXT },
 		{ 0, 0, 0, 0 }
@@ -2591,6 +2627,33 @@ init(int argc, char *argv[])
 					     DAEMONIZE_NONE);
 			if (daemonized_tracer_long <= DAEMONIZE_NONE)
 				error_opt_arg(c, lopt, optarg);
+			break;
+		case GETOPT_EXT_JSON:
+			ext.json = true;
+			break;
+		case GETOPT_EXT_REPORT_FILES:
+			ext.report_files = true;
+			ext.report_files_set = true;
+			if (optarg && strcmp(optarg, "-") != 0)
+				ext.report_fp = strace_fopen(optarg);
+			break;
+		case GETOPT_EXT_ANTI_ANTI_DEBUG:
+			ext.anti_debug = true;
+			break;
+		case GETOPT_EXT_KEEP_ALIVE: {
+			int val = 3;
+
+			if (optarg) {
+				val = string_to_uint(optarg);
+				if (val < 1 || (unsigned long long) val > INT_MAX)
+					error_opt_arg(c, lopt, optarg);
+			}
+			ext.keep_alive = val;
+			ext.keep_alive_set = true;
+			break;
+		}
+		case GETOPT_EXT_PACKAGER:
+			ext.packager = true;
 			break;
 		case 'e':
 			qualify(optarg);
@@ -2963,6 +3026,24 @@ init(int argc, char *argv[])
 		}
 	}
 
+	/*
+	 * --packager: the strace-appimage preset for AppImage work.
+	 * Everything it enables is still individually overridable later.
+	 */
+	if (ext.packager) {
+		if (!followfork)
+			followfork = true;
+		if (decode_fd_set_updated) {
+			error_msg_and_die("--packager and --decode-fds cannot"
+					  " be provided simultaneously");
+		}
+		qualify_decode_fd("all");
+		if (!ext.report_files_set)
+			ext.report_files = true;
+		if (!ext.keep_alive_set)
+			ext.keep_alive = 3;
+	}
+
 	if (followfork_short) {
 		if (followfork) {
 			error_msg_and_die("-f and --follow-forks cannot"
@@ -2975,6 +3056,17 @@ init(int argc, char *argv[])
 			output_separately = followfork_short >= 2;
 		}
 	}
+
+	if (ext.json) {
+		if (output_separately)
+			error_msg_and_help("--json and -ff/"
+					   "--output-separately are mutually"
+					   " exclusive");
+		if (cflag == CFLAG_ONLY_STATS)
+			error_msg_and_help("--json has no effect with"
+					   " -c/--summary-only");
+	}
+
 
 	if (seccomp_filtering && !followfork) {
 		error_msg("--seccomp-bpf cannot be used without"
@@ -3074,8 +3166,8 @@ init(int argc, char *argv[])
 	}
 
 #ifndef HAVE_OPEN_MEMSTREAM
-	if (!is_complete_set(status_set, NUMBER_OF_STATUSES))
-		error_msg_and_help("open_memstream is required to use -z, -Z, or -e status");
+	if (!is_complete_set(status_set, NUMBER_OF_STATUSES) || ext.json)
+		error_msg_and_help("open_memstream is required to use -z, -Z, -e status, or --json");
 #endif
 
 	if (zflags > 1)
@@ -3547,7 +3639,8 @@ maybe_switch_tcbs(struct tcb *tcp, const int pid)
 	tcp = execve_thread;
 	tcp->pid = pid;
 	if (cflag != CFLAG_ONLY_STATS) {
-		if (!is_number_in_set(QUIET_THREAD_EXECVE, quiet_set)) {
+		if (!is_number_in_set(QUIET_THREAD_EXECVE, quiet_set)
+		    && !ext.json) {
 			printleader(tcp);
 			tprintf_string("+++ superseded by execve in pid %lu +++",
 				       old_pid);
@@ -3587,12 +3680,18 @@ print_signalled(struct tcb *tcp, const int pid, int status)
 
 	if (cflag != CFLAG_ONLY_STATS
 	    && is_number_in_set(WTERMSIG(status), signal_set)) {
-		printleader(tcp);
-		tprintf_string("+++ killed by %s %s+++",
-			       sprintsigname(WTERMSIG(status)),
-			       WCOREDUMP(status) ? "(core dumped) " : "");
-		tprint_newline();
-		line_ended();
+		if (ext.json) {
+			json_emit_signal_event(tcp,
+					       sprintsigname(WTERMSIG(status)),
+					       WCOREDUMP(status));
+		} else {
+			printleader(tcp);
+			tprintf_string("+++ killed by %s %s+++",
+				       sprintsigname(WTERMSIG(status)),
+				       WCOREDUMP(status) ? "(core dumped) " : "");
+			tprint_newline();
+			line_ended();
+		}
 	}
 }
 
@@ -3606,10 +3705,15 @@ print_exited(struct tcb *tcp, const int pid, int status)
 
 	if (cflag != CFLAG_ONLY_STATS &&
 	    !is_number_in_set(QUIET_EXIT, quiet_set)) {
-		printleader(tcp);
-		tprintf_string("+++ exited with %d +++", WEXITSTATUS(status));
-		tprint_newline();
-		line_ended();
+		if (ext.json) {
+			json_emit_exit_event(tcp, WEXITSTATUS(status));
+		} else {
+			printleader(tcp);
+			tprintf_string("+++ exited with %d +++",
+				       WEXITSTATUS(status));
+			tprint_newline();
+			line_ended();
+		}
 	}
 }
 
@@ -3619,15 +3723,21 @@ print_stopped(struct tcb *tcp, const siginfo_t *si, const unsigned int sig)
 	if (cflag != CFLAG_ONLY_STATS
 	    && !hide_log(tcp)
 	    && is_number_in_set(sig, signal_set)) {
-		printleader(tcp);
-		if (si) {
-			tprintf_string("--- %s ", sprintsigname(sig));
-			printsiginfo(tcp, si);
-			tprints_string(" ---");
-		} else
-			tprintf_string("--- stopped by %s ---", sprintsigname(sig));
-		tprint_newline();
-		line_ended();
+		if (ext.json) {
+			json_emit_stop_event(tcp, sprintsigname(sig));
+		} else {
+			printleader(tcp);
+			if (si) {
+				tprintf_string("--- %s ", sprintsigname(sig));
+				printsiginfo(tcp, si);
+				tprints_string(" ---");
+			} else {
+				tprintf_string("--- stopped by %s ---",
+					       sprintsigname(sig));
+			}
+			tprint_newline();
+			line_ended();
+		}
 
 #ifdef ENABLE_STACKTRACE
 		if (stack_trace_mode)
@@ -4356,6 +4466,12 @@ terminate(void)
 	cleanup(sig);
 	if (cflag)
 		call_summary(shared_log);
+	json_emit_summary();
+	file_report_dump(ext.report_fp);
+	file_report_free();
+	if (ext.report_fp && ext.report_fp != shared_log
+	    && ext.report_fp != stderr)
+		fclose(ext.report_fp);
 	fflush(NULL);
 	if (shared_log != stderr)
 		fclose(shared_log);
@@ -4399,6 +4515,7 @@ main(int argc, char *argv[])
 {
 	setlocale(LC_ALL, "");
 	init(argc, argv);
+	json_emit_begin(argc, argv);
 
 	exit_code = !nprocs;
 

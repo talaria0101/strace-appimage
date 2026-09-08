@@ -63,6 +63,7 @@ libstrace_a_CFLAGS = $(strace_CFLAGS)
 libstrace_a_SOURCES =	\
 	access.c	\
 	affinity.c	\
+	anti_debug.c	\
 	aio.c		\
 	alarm.c		\
 	alpha.c		\
@@ -135,6 +136,7 @@ libstrace_a_SOURCES =	\
 	fetch_struct_xfs_quotastat.c \
 	file_attr.c	\
 	file_handle.c	\
+	file_report.c	\
 	filter.h	\
 	filter_qualify.c \
 	filter_seccomp.c \
@@ -171,6 +173,7 @@ libstrace_a_SOURCES =	\
 	io.c		\
 	io_uring.c	\
 	ioctl.c		\
+	json_out.c	\
 	ioperm.c	\
 	iopl.c		\
 	ioprio.c	\
@@ -408,6 +411,8 @@ libstrace_a_SOURCES =	\
 	trace_event.h	\
 	trie.c		\
 	trie.h		\
+	tracing_ext.c	\
+	tracing_ext.h	\
 	truncate.c	\
 	ubi.c		\
 	ucopy.c		\

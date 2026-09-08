@@ -36,6 +36,7 @@
 #include "scno.h"
 
 #include "regs.h"
+#include "tracing_ext.h"
 
 #if defined(SPARC64)
 # undef PTRACE_GETREGS
@@ -578,6 +579,80 @@ tamper_with_syscall_exiting(struct tcb *tcp)
  * other: error; call syscall_entering_finish(tcp, res), where res is the value
  *    returned.
  */
+
+/*
+ * strace-appimage extension hooks.
+ *
+ * ext_syscall_entering_trace(): reset the per-syscall capture state and,
+ * for --keep-alive, skip an exit_group execution (set_scno(-1), the same
+ * mechanism -e inject= uses) so the tracee lives past its N first exits.
+ *
+ * ext_syscall_exiting_tamper(): runs at the syscall-exit stop, before the
+ * return value is decoded and printed: restores success for suppressed
+ * exit_group calls, spoofs ptrace(PTRACE_TRACEME) results for
+ * --anti-anti-debug, and rewrites TracerPid in freshly read
+ * /proc/<pid>/status buffers.
+ *
+ * ext_syscall_published(): called once per syscall whose output is being
+ * published (after -z/-Z status filtering): collects the file report
+ * entry and emits the JSON event.
+ */
+static void
+ext_syscall_entering_trace(struct tcb *tcp)
+{
+	ext_reset_paths(tcp);
+	ext_reset_notes(tcp);
+
+	if (ext.keep_alive > 0 && tcp->keepalive_left > 0
+	    && strcmp(tcp_sysent(tcp)->sys_name, "exit_group") == 0
+	    && set_scno(tcp, -1) >= 0) {
+		tcp->flags |= TCB_EXT_KEEPALIVE_SKIP;
+		--tcp->keepalive_left;
+		ext_add_note(tcp, "keep-alive: exit_group suppressed");
+	}
+}
+
+static void
+ext_syscall_exiting_tamper(struct tcb *tcp, int res)
+{
+	if (!extensions_active())
+		return;
+
+	/*
+	 * The keep-alive flag must be cleared even when the exit could
+	 * not be decoded, or it would leak into the next syscall.
+	 */
+	if (tcp->flags & TCB_EXT_KEEPALIVE_SKIP) {
+		tcp->flags &= ~TCB_EXT_KEEPALIVE_SKIP;
+		set_success(tcp, 0);
+	}
+
+	/* Everything below needs a successfully fetched result. */
+	if (res != 1)
+		return;
+
+	if (ext.anti_debug && tcp_sysent(tcp)->sen == SEN_ptrace
+	    && tcp->u_arg[0] == 0 && tcp->u_error == EPERM) {
+		set_success(tcp, 0);
+		ext_add_note(tcp, "anti-debug: ptrace(PTRACE_TRACEME) "
+			      "spoofed as successful");
+	}
+
+	anti_debug_syscall_exiting(tcp);
+}
+
+static void
+ext_syscall_published(struct tcb *tcp, const struct timespec *ts,
+		      bool publish)
+{
+	if (!extensions_active() || !publish)
+		return;
+
+	file_report_note_syscall(tcp);
+	if (ext.json)
+		json_emit_syscall_event(tcp, ts);
+}
+
 int
 syscall_entering_decode(struct tcb *tcp)
 {
@@ -654,6 +729,8 @@ syscall_entering_trace(struct tcb *tcp, unsigned int *sig)
 	if (inject(tcp))
 		tamper_with_syscall_entering(tcp, sig);
 
+	ext_syscall_entering_trace(tcp);
+
 	if (cflag == CFLAG_ONLY_STATS) {
 		return 0;
 	}
@@ -663,7 +740,7 @@ syscall_entering_trace(struct tcb *tcp, unsigned int *sig)
 		unwind_tcb_capture(tcp);
 #endif
 
-	if (!is_complete_set(status_set, NUMBER_OF_STATUSES))
+	if (!is_complete_set(status_set, NUMBER_OF_STATUSES) || ext.json)
 		strace_open_memstream(tcp);
 
 	printleader(tcp);
@@ -681,7 +758,7 @@ syscall_entering_finish(struct tcb *tcp, int res)
 	tcp->sys_func_rval = res;
 
 	/* Measure the entrance time as late as possible to avoid errors. */
-	if ((Tflag || cflag) && !filtered(tcp))
+	if ((Tflag || cflag || extensions_active()) && !filtered(tcp))
 		clock_gettime(CLOCK_MONOTONIC, &tcp->etime);
 
 	/* Start tracking system time */
@@ -714,7 +791,7 @@ int
 syscall_exiting_decode(struct tcb *tcp, struct timespec *pts)
 {
 	/* Measure the exit time as early as possible to avoid errors. */
-	if ((Tflag || cflag) && !filtered(tcp))
+	if ((Tflag || cflag || extensions_active()) && !filtered(tcp))
 		clock_gettime(CLOCK_MONOTONIC, pts);
 
 	if (tcp_sysent(tcp)->sys_flags & MEMORY_MAPPING_CHANGE)
@@ -771,6 +848,13 @@ print_injected_note(struct tcb *tcp)
 		tprints_sysret_string("inject", "INJECTED");
 	if (syscall_tampered_delayed(tcp))
 		tprints_sysret_string("delay", "DELAYED");
+
+	if (tcp->ext_nnotes > 0 && !ext.json) {
+		const char *notes = ext_notes_joined(tcp, ';');
+
+		if (*notes)
+			tprints_sysret_string("notes", notes);
+	}
 }
 
 static void
@@ -790,6 +874,8 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 	    inject_delay_exit(tcp) ||
 	    inject_poke_exit(tcp))
 		tamper_with_syscall_exiting(tcp);
+
+	ext_syscall_exiting_tamper(tcp, res);
 
 	if (cflag != CFLAG_ONLY_STATS)
 		print_syscall_resume(tcp);
@@ -820,6 +906,8 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 			tprint_newline();
 			if (status_filtering)
 				strace_close_memstream(tcp, publish);
+			else if (ext.json)
+				strace_close_memstream(tcp, false);
 			line_ended();
 		}
 #ifdef ENABLE_STACKTRACE
@@ -847,8 +935,10 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 			       && is_number_in_set(STATUS_FAILED, status_set);
 		publish |= !syserror(tcp)
 			   && is_number_in_set(STATUS_SUCCESSFUL, status_set);
-		if (cflag != CFLAG_ONLY_STATS)
-			strace_close_memstream(tcp, publish);
+		if (cflag != CFLAG_ONLY_STATS) {
+			ext_syscall_published(tcp, ts, publish);
+			strace_close_memstream(tcp, publish && !ext.json);
+		}
 		if (!publish) {
 			if (cflag != CFLAG_ONLY_STATS)
 				line_ended();
@@ -1027,6 +1117,10 @@ syscall_exiting_trace(struct tcb *tcp, struct timespec *ts, int res)
 	tprint_newline();
 	dumpio(tcp);
 	line_ended();
+
+	ext_syscall_published(tcp, ts, true);
+	if (ext.json)
+		strace_close_memstream(tcp, false);
 
 #ifdef ENABLE_STACKTRACE
 	if (stack_trace_mode)

@@ -262,6 +262,10 @@ struct inject_opts {
 # define MAX_ERRNO_VALUE			4095
 
 /* Trace Control Block */
+/* strace-appimage tracing extension limits (see tracing_ext.h) */
+# define EXT_MAX_PATHS_PER_SYSCALL 4
+# define EXT_MAX_NOTES_PER_SYSCALL 4
+
 struct tcb {
 	int flags;		/* See below for TCB_ values */
 	int pid;		/* If 0, this tcb is free */
@@ -292,6 +296,17 @@ struct tcb {
 	struct timespec atime;	/* System time right after attach */
 	struct timespec etime;	/* Syscall entry time (CLOCK_MONOTONIC) */
 	struct timespec delay_expiration_time; /* When does the delay end */
+
+	/*
+	 * strace-appimage tracing extensions (see tracing_ext.h):
+	 * paths captured for the syscall being decoded, human notes for it,
+	 * and the remaining --keep-alive budget of this process.
+	 */
+	char *ext_paths[EXT_MAX_PATHS_PER_SYSCALL];
+	unsigned int ext_npaths;
+	char *ext_notes[EXT_MAX_NOTES_PER_SYSCALL];
+	unsigned int ext_nnotes;
+	int keepalive_left;
 
 	/*
 	 * The ID of the PID namespace of this process
@@ -372,6 +387,8 @@ struct tcb {
 						 * attached.
 						 */
 # define TCP_AFTER_KVM_RUN		0x80000	/* The process has returned from KVM_RUN ioctl */
+# define TCB_EXT_KEEPALIVE_SKIP		0x100000	/* strace-appimage: this exit_group was
+					   suppressed by --keep-alive */
 
 /* qualifier flags */
 # define QUAL_TRACE	0x001	/* this system call should be traced */
@@ -1800,7 +1817,9 @@ extern void tprints_comment(const char *str);
 /*
  * Staging output for status qualifier.
  */
+extern FILE *shared_log;	/* log file (stderr by default) */
 extern FILE *strace_open_memstream(struct tcb *tcp);
+extern const char *strace_staged_output(struct tcb *tcp);
 extern void strace_close_memstream(struct tcb *tcp, bool publish);
 
 static inline void

@@ -46,6 +46,23 @@ strace_open_memstream(struct tcb *tcp)
 	return fp;
 }
 
+/*
+ * Return the text staged for the current syscall, or NULL when no
+ * staging is active.  The buffer belongs to the staged output data and
+ * stays valid until strace_close_memstream(); callers must not free it.
+ * Used by the strace-appimage JSON driver to embed the classic decoded
+ * line verbatim into each JSON event.
+ */
+const char *
+strace_staged_output(struct tcb *tcp)
+{
+	if (!tcp->staged_output_data)
+		return NULL;
+
+	fflush(tcp->outf);
+	return tcp->staged_output_data->memfptr;
+}
+
 void
 strace_close_memstream(struct tcb *tcp, bool publish)
 {

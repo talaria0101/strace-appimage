@@ -13,6 +13,7 @@
  */
 
 #include "defs.h"
+#include "tracing_ext.h"
 #include <limits.h>
 #include <fcntl.h>
 #include <stdarg.h>
@@ -1398,6 +1399,11 @@ printpathn(struct tcb *const tcp, const kernel_ulong_t addr, unsigned int n)
 
 		if (nul_seen)
 			selinux_printfilecon(tcp, path);
+
+		/* strace-appimage: remember the decoded path for
+		 * --json / --report-files. */
+		if (extensions_active() && path[0] == '/')
+			ext_note_path(tcp, path);
 	}
 
 	return nul_seen;

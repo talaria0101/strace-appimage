@@ -2,6 +2,9 @@ Noteworthy changes in release ?.? (????-??-??)
 ==============================================
 
 * Improvements
+  * strace-appimage: added --json, --report-files, --anti-anti-debug,
+    --keep-alive, and --packager options (see doc/strace.1.in and the
+    repository README).
   * Implemented decoding of fchroot syscall.
   * Implemented decoding of SO_RIGHTS_NOTRUNC socket option.
   * Implemented decoding of IFA_MC_USERS and IFA_PROTO netlink attributes.

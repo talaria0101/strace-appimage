@@ -11,6 +11,7 @@
  */
 
 #include "defs.h"
+#include "tracing_ext.h"
 
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -122,6 +123,10 @@ print_sockaddr_data_un(struct tcb *tcp, const void *const buf, const int addrlen
 		print_quoted_string(sa_un->sun_path, path_len + 1,
 				    QUOTE_0_TERMINATED);
 		selinux_printfilecon(tcp, sa_un->sun_path);
+		/* strace-appimage: remember abstract-less AF_UNIX socket
+		 * paths for --json / --report-files. */
+		if (extensions_active() && sa_un->sun_path[0] == '/')
+			ext_note_path(tcp, sa_un->sun_path);
 	} else {
 		tprints_string("@");
 		print_quoted_string(sa_un->sun_path + 1, path_len - 1, 0);
