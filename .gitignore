@@ -35,3 +35,13 @@
 Makefile
 Makefile.in
 core
+
+# strace-appimage: test/validation artifacts (regenerable, run locally)
+tests-ext/artifacts/
+tests-ext/*.bin
+tests-ext/*.buildlog
+tests-ext/*.log
+tests-ext/testbin/antidebug_detect
+tests-ext/testbin/hard_target
+tests-ext/testbin/hard_target_static
+tests-ext/testbin/*.buildlog

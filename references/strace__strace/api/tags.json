@@ -1,0 +1,672 @@
+[
+ {
+  "name": "v7.2",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v7.2",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v7.2",
+  "commit": {
+   "sha": "195ac8ddbf6fad16ff1ff125b0feb725b6c46dcf",
+   "url": "https://api.github.com/repos/strace/strace/commits/195ac8ddbf6fad16ff1ff125b0feb725b6c46dcf"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y3LjI="
+ },
+ {
+  "name": "v7.1",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v7.1",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v7.1",
+  "commit": {
+   "sha": "40bbaa53cfbe65a48ebb503aa208387989228db6",
+   "url": "https://api.github.com/repos/strace/strace/commits/40bbaa53cfbe65a48ebb503aa208387989228db6"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y3LjE="
+ },
+ {
+  "name": "v7.0",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v7.0",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v7.0",
+  "commit": {
+   "sha": "5a21bf14c4f4bd28a6238caa6a24d2c7de504ad3",
+   "url": "https://api.github.com/repos/strace/strace/commits/5a21bf14c4f4bd28a6238caa6a24d2c7de504ad3"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y3LjA="
+ },
+ {
+  "name": "v6.19",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.19",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.19",
+  "commit": {
+   "sha": "1d78a4ce1bfa3754b3b99b1e4bb15790001b77cb",
+   "url": "https://api.github.com/repos/strace/strace/commits/1d78a4ce1bfa3754b3b99b1e4bb15790001b77cb"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjE5"
+ },
+ {
+  "name": "v6.18",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.18",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.18",
+  "commit": {
+   "sha": "4ed1454cf539ee529ca5db8b1e7a779eb15efc88",
+   "url": "https://api.github.com/repos/strace/strace/commits/4ed1454cf539ee529ca5db8b1e7a779eb15efc88"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjE4"
+ },
+ {
+  "name": "v6.17",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.17",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.17",
+  "commit": {
+   "sha": "9d7b4d1a59a20171bfad65a4eea883190ddd3791",
+   "url": "https://api.github.com/repos/strace/strace/commits/9d7b4d1a59a20171bfad65a4eea883190ddd3791"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjE3"
+ },
+ {
+  "name": "v6.16",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.16",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.16",
+  "commit": {
+   "sha": "ba20408d99c391c937453807285394117f8f3da7",
+   "url": "https://api.github.com/repos/strace/strace/commits/ba20408d99c391c937453807285394117f8f3da7"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjE2"
+ },
+ {
+  "name": "v6.15",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.15",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.15",
+  "commit": {
+   "sha": "918fce0ca57d33e51bb4d812f78759a877dfd1ca",
+   "url": "https://api.github.com/repos/strace/strace/commits/918fce0ca57d33e51bb4d812f78759a877dfd1ca"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjE1"
+ },
+ {
+  "name": "v6.14",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.14",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.14",
+  "commit": {
+   "sha": "68b13a1b2a9f29e1b39c598815045bb06da66b80",
+   "url": "https://api.github.com/repos/strace/strace/commits/68b13a1b2a9f29e1b39c598815045bb06da66b80"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjE0"
+ },
+ {
+  "name": "v6.13",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.13",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.13",
+  "commit": {
+   "sha": "dd0afd1c9cfc4e4040fe18db40345a227df12d03",
+   "url": "https://api.github.com/repos/strace/strace/commits/dd0afd1c9cfc4e4040fe18db40345a227df12d03"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjEz"
+ },
+ {
+  "name": "v6.12",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.12",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.12",
+  "commit": {
+   "sha": "30736a7fdc20fd1906869e7fa3f786f457f506ad",
+   "url": "https://api.github.com/repos/strace/strace/commits/30736a7fdc20fd1906869e7fa3f786f457f506ad"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjEy"
+ },
+ {
+  "name": "v6.11",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.11",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.11",
+  "commit": {
+   "sha": "8399328f628182cf236a1c39a074d601babdeaa4",
+   "url": "https://api.github.com/repos/strace/strace/commits/8399328f628182cf236a1c39a074d601babdeaa4"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjEx"
+ },
+ {
+  "name": "v6.10",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.10",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.10",
+  "commit": {
+   "sha": "922d2d5717c05b8feb17828ca57c1c470193cc1e",
+   "url": "https://api.github.com/repos/strace/strace/commits/922d2d5717c05b8feb17828ca57c1c470193cc1e"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjEw"
+ },
+ {
+  "name": "v6.9",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.9",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.9",
+  "commit": {
+   "sha": "990e1478663b610e9f626adb3b8619f31b308d0e",
+   "url": "https://api.github.com/repos/strace/strace/commits/990e1478663b610e9f626adb3b8619f31b308d0e"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2Ljk="
+ },
+ {
+  "name": "v6.8",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.8",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.8",
+  "commit": {
+   "sha": "a592648ae7d380b79ffb65275ec153b9e4844a57",
+   "url": "https://api.github.com/repos/strace/strace/commits/a592648ae7d380b79ffb65275ec153b9e4844a57"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2Ljg="
+ },
+ {
+  "name": "v6.7",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.7",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.7",
+  "commit": {
+   "sha": "091ed4fda1f8ab86b79b52790d4ebc41c333bc49",
+   "url": "https://api.github.com/repos/strace/strace/commits/091ed4fda1f8ab86b79b52790d4ebc41c333bc49"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2Ljc="
+ },
+ {
+  "name": "v6.6",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.6",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.6",
+  "commit": {
+   "sha": "bf598d9bbffc64c046bd288bce51535d0d98d800",
+   "url": "https://api.github.com/repos/strace/strace/commits/bf598d9bbffc64c046bd288bce51535d0d98d800"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjY="
+ },
+ {
+  "name": "v6.5",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.5",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.5",
+  "commit": {
+   "sha": "b271519228028f77da64d958b9419cef0762e24b",
+   "url": "https://api.github.com/repos/strace/strace/commits/b271519228028f77da64d958b9419cef0762e24b"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjU="
+ },
+ {
+  "name": "v6.4",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.4",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.4",
+  "commit": {
+   "sha": "999d3a5d0e39eab0172f1cc53a5d03691fadbbc8",
+   "url": "https://api.github.com/repos/strace/strace/commits/999d3a5d0e39eab0172f1cc53a5d03691fadbbc8"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjQ="
+ },
+ {
+  "name": "v6.3",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.3",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.3",
+  "commit": {
+   "sha": "a6122df0edd4d72ef0153eebf10c16ae36778089",
+   "url": "https://api.github.com/repos/strace/strace/commits/a6122df0edd4d72ef0153eebf10c16ae36778089"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjM="
+ },
+ {
+  "name": "v6.2",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.2",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.2",
+  "commit": {
+   "sha": "8c0beb8fb9e3d3314dfcc9c5eb458934a995a652",
+   "url": "https://api.github.com/repos/strace/strace/commits/8c0beb8fb9e3d3314dfcc9c5eb458934a995a652"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjI="
+ },
+ {
+  "name": "v6.1",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.1",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.1",
+  "commit": {
+   "sha": "4402d774ae61bea263f022dd5846062b8c2976be",
+   "url": "https://api.github.com/repos/strace/strace/commits/4402d774ae61bea263f022dd5846062b8c2976be"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjE="
+ },
+ {
+  "name": "v6.0",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v6.0",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v6.0",
+  "commit": {
+   "sha": "fb940a0481862da4abd44f5e910713ca9e072a78",
+   "url": "https://api.github.com/repos/strace/strace/commits/fb940a0481862da4abd44f5e910713ca9e072a78"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y2LjA="
+ },
+ {
+  "name": "v5.19",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.19",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.19",
+  "commit": {
+   "sha": "9b00bd51c9040931803c6d6d1718a0faef7d7d59",
+   "url": "https://api.github.com/repos/strace/strace/commits/9b00bd51c9040931803c6d6d1718a0faef7d7d59"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjE5"
+ },
+ {
+  "name": "v5.18",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.18",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.18",
+  "commit": {
+   "sha": "d57929aee491295c4e869d8be611a9fe4c7ae248",
+   "url": "https://api.github.com/repos/strace/strace/commits/d57929aee491295c4e869d8be611a9fe4c7ae248"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjE4"
+ },
+ {
+  "name": "v5.17",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.17",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.17",
+  "commit": {
+   "sha": "48fedb268e14777017303aae017eb1b1d845f84c",
+   "url": "https://api.github.com/repos/strace/strace/commits/48fedb268e14777017303aae017eb1b1d845f84c"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjE3"
+ },
+ {
+  "name": "v5.16",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.16",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.16",
+  "commit": {
+   "sha": "69f66eb864ffa547eda77fa594c4b612b800e8ea",
+   "url": "https://api.github.com/repos/strace/strace/commits/69f66eb864ffa547eda77fa594c4b612b800e8ea"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjE2"
+ },
+ {
+  "name": "v5.15",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.15",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.15",
+  "commit": {
+   "sha": "e01f82bb348ba87e659c5cde78fcafa13c93f158",
+   "url": "https://api.github.com/repos/strace/strace/commits/e01f82bb348ba87e659c5cde78fcafa13c93f158"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjE1"
+ },
+ {
+  "name": "v5.14",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.14",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.14",
+  "commit": {
+   "sha": "39b24bd406c97a1fa1a038e8ad736b71261e6504",
+   "url": "https://api.github.com/repos/strace/strace/commits/39b24bd406c97a1fa1a038e8ad736b71261e6504"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjE0"
+ },
+ {
+  "name": "v5.13",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.13",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.13",
+  "commit": {
+   "sha": "a5f9743c7bf28f99505021c6ca37d2ad85e5ea1a",
+   "url": "https://api.github.com/repos/strace/strace/commits/a5f9743c7bf28f99505021c6ca37d2ad85e5ea1a"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjEz"
+ },
+ {
+  "name": "v5.12",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.12",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.12",
+  "commit": {
+   "sha": "91465b47e1e61c07dcd559e781ae34b99c519bee",
+   "url": "https://api.github.com/repos/strace/strace/commits/91465b47e1e61c07dcd559e781ae34b99c519bee"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjEy"
+ },
+ {
+  "name": "v5.11",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.11",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.11",
+  "commit": {
+   "sha": "cdda3034d81dec541733d95748c91057aff1e3ec",
+   "url": "https://api.github.com/repos/strace/strace/commits/cdda3034d81dec541733d95748c91057aff1e3ec"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjEx"
+ },
+ {
+  "name": "v5.10",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.10",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.10",
+  "commit": {
+   "sha": "5097662f250d4d8558ccaa54684738c752724c08",
+   "url": "https://api.github.com/repos/strace/strace/commits/5097662f250d4d8558ccaa54684738c752724c08"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjEw"
+ },
+ {
+  "name": "v5.9",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.9",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.9",
+  "commit": {
+   "sha": "46e578e9fbb85549dbdc6c64301bea0c425aacc5",
+   "url": "https://api.github.com/repos/strace/strace/commits/46e578e9fbb85549dbdc6c64301bea0c425aacc5"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1Ljk="
+ },
+ {
+  "name": "v5.8",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.8",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.8",
+  "commit": {
+   "sha": "57e2838907758753a9ed8148949d9b576f3eddae",
+   "url": "https://api.github.com/repos/strace/strace/commits/57e2838907758753a9ed8148949d9b576f3eddae"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1Ljg="
+ },
+ {
+  "name": "v5.7",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.7",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.7",
+  "commit": {
+   "sha": "e819a270c23f08613c38ec9591ed2ef6d5743d46",
+   "url": "https://api.github.com/repos/strace/strace/commits/e819a270c23f08613c38ec9591ed2ef6d5743d46"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1Ljc="
+ },
+ {
+  "name": "v5.6",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.6",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.6",
+  "commit": {
+   "sha": "3e32da097680f1d3b29807c6866469f5a4df5d28",
+   "url": "https://api.github.com/repos/strace/strace/commits/3e32da097680f1d3b29807c6866469f5a4df5d28"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjY="
+ },
+ {
+  "name": "v5.5",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.5",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.5",
+  "commit": {
+   "sha": "da2fa3bc25816e471e8b4b2a8326cd486bb7ad0f",
+   "url": "https://api.github.com/repos/strace/strace/commits/da2fa3bc25816e471e8b4b2a8326cd486bb7ad0f"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjU="
+ },
+ {
+  "name": "v5.4",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.4",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.4",
+  "commit": {
+   "sha": "bef61250464193f70aaffd36f592081ffa815b23",
+   "url": "https://api.github.com/repos/strace/strace/commits/bef61250464193f70aaffd36f592081ffa815b23"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjQ="
+ },
+ {
+  "name": "v5.3",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.3",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.3",
+  "commit": {
+   "sha": "187016a629463355875c64c9a45fd94f2b44cb50",
+   "url": "https://api.github.com/repos/strace/strace/commits/187016a629463355875c64c9a45fd94f2b44cb50"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjM="
+ },
+ {
+  "name": "v5.2",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.2",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.2",
+  "commit": {
+   "sha": "dc03195eb63d676f8b6e591674798f878e8f92fe",
+   "url": "https://api.github.com/repos/strace/strace/commits/dc03195eb63d676f8b6e591674798f878e8f92fe"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjI="
+ },
+ {
+  "name": "v5.1",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.1",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.1",
+  "commit": {
+   "sha": "c42818bc572782d49cdee5a29db2b9d856c63824",
+   "url": "https://api.github.com/repos/strace/strace/commits/c42818bc572782d49cdee5a29db2b9d856c63824"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjE="
+ },
+ {
+  "name": "v5.0",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v5.0",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v5.0",
+  "commit": {
+   "sha": "d091f1a9e27756b3c399da1c500c915f473a56f3",
+   "url": "https://api.github.com/repos/strace/strace/commits/d091f1a9e27756b3c399da1c500c915f473a56f3"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y1LjA="
+ },
+ {
+  "name": "v4.26",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.26",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.26",
+  "commit": {
+   "sha": "27739ebccc96c0f70cd2aeb37fd7b0ecfef21724",
+   "url": "https://api.github.com/repos/strace/strace/commits/27739ebccc96c0f70cd2aeb37fd7b0ecfef21724"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjI2"
+ },
+ {
+  "name": "v4.25",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.25",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.25",
+  "commit": {
+   "sha": "c12d2de112d1f32a0a6ed00a8dc483fbb5596bfc",
+   "url": "https://api.github.com/repos/strace/strace/commits/c12d2de112d1f32a0a6ed00a8dc483fbb5596bfc"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjI1"
+ },
+ {
+  "name": "v4.24",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.24",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.24",
+  "commit": {
+   "sha": "150655ca3e0f68f92dcb1e434301ac485aad5e15",
+   "url": "https://api.github.com/repos/strace/strace/commits/150655ca3e0f68f92dcb1e434301ac485aad5e15"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjI0"
+ },
+ {
+  "name": "v4.23",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.23",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.23",
+  "commit": {
+   "sha": "9a7661cc6223e0297183f92bc1f3c4943498c413",
+   "url": "https://api.github.com/repos/strace/strace/commits/9a7661cc6223e0297183f92bc1f3c4943498c413"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjIz"
+ },
+ {
+  "name": "v4.22",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.22",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.22",
+  "commit": {
+   "sha": "9630646cfad13d5842f99ecfe1f9ef7a1287fb46",
+   "url": "https://api.github.com/repos/strace/strace/commits/9630646cfad13d5842f99ecfe1f9ef7a1287fb46"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjIy"
+ },
+ {
+  "name": "v4.21",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.21",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.21",
+  "commit": {
+   "sha": "51630c200205190aa162989ae4a7c73acfecd365",
+   "url": "https://api.github.com/repos/strace/strace/commits/51630c200205190aa162989ae4a7c73acfecd365"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjIx"
+ },
+ {
+  "name": "v4.20",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.20",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.20",
+  "commit": {
+   "sha": "c992025798d2c45ee2c1e7c7dcca50d7483e0b44",
+   "url": "https://api.github.com/repos/strace/strace/commits/c992025798d2c45ee2c1e7c7dcca50d7483e0b44"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjIw"
+ },
+ {
+  "name": "v4.19",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.19",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.19",
+  "commit": {
+   "sha": "af9010e63bf1e66d909ca54083b416710026a199",
+   "url": "https://api.github.com/repos/strace/strace/commits/af9010e63bf1e66d909ca54083b416710026a199"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjE5"
+ },
+ {
+  "name": "v4.18",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.18",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.18",
+  "commit": {
+   "sha": "c136e9e449fe733e77e8766a9b26e6dc1134203e",
+   "url": "https://api.github.com/repos/strace/strace/commits/c136e9e449fe733e77e8766a9b26e6dc1134203e"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjE4"
+ },
+ {
+  "name": "v4.17",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.17",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.17",
+  "commit": {
+   "sha": "23ed9034c8a000a65742c97e28ea161cd6e3baf5",
+   "url": "https://api.github.com/repos/strace/strace/commits/23ed9034c8a000a65742c97e28ea161cd6e3baf5"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjE3"
+ },
+ {
+  "name": "v4.16",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.16",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.16",
+  "commit": {
+   "sha": "b13da8675cb3faf9c10d73b2a43542ac74502dae",
+   "url": "https://api.github.com/repos/strace/strace/commits/b13da8675cb3faf9c10d73b2a43542ac74502dae"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjE2"
+ },
+ {
+  "name": "v4.15",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.15",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.15",
+  "commit": {
+   "sha": "3a838cd31ac4876280911c8f9e86c5a2d2ba4a47",
+   "url": "https://api.github.com/repos/strace/strace/commits/3a838cd31ac4876280911c8f9e86c5a2d2ba4a47"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjE1"
+ },
+ {
+  "name": "v4.14",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.14",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.14",
+  "commit": {
+   "sha": "e1fec334db8df3c4502634339c868da87e36bc8a",
+   "url": "https://api.github.com/repos/strace/strace/commits/e1fec334db8df3c4502634339c868da87e36bc8a"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjE0"
+ },
+ {
+  "name": "v4.13",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.13",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.13",
+  "commit": {
+   "sha": "02fb1755da3baac2d2601977d828d547b9398fd9",
+   "url": "https://api.github.com/repos/strace/strace/commits/02fb1755da3baac2d2601977d828d547b9398fd9"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjEz"
+ },
+ {
+  "name": "v4.12",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.12",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.12",
+  "commit": {
+   "sha": "ed1f2065519d2041071301e63e139ae77165122b",
+   "url": "https://api.github.com/repos/strace/strace/commits/ed1f2065519d2041071301e63e139ae77165122b"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjEy"
+ },
+ {
+  "name": "v4.11",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.11",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.11",
+  "commit": {
+   "sha": "2acb065f42de7c56cff6fb55fc655a4be09356c7",
+   "url": "https://api.github.com/repos/strace/strace/commits/2acb065f42de7c56cff6fb55fc655a4be09356c7"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjEx"
+ },
+ {
+  "name": "v4.10",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.10",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.10",
+  "commit": {
+   "sha": "dfabccf997dbad325442353926270d5b1289943f",
+   "url": "https://api.github.com/repos/strace/strace/commits/dfabccf997dbad325442353926270d5b1289943f"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjEw"
+ },
+ {
+  "name": "v4.9",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.9",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.9",
+  "commit": {
+   "sha": "e4db4c4bdddf1c37374fe1449a0c669b7f105d7e",
+   "url": "https://api.github.com/repos/strace/strace/commits/e4db4c4bdddf1c37374fe1449a0c669b7f105d7e"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0Ljk="
+ },
+ {
+  "name": "v4.8",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.8",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.8",
+  "commit": {
+   "sha": "1cd3f5f844d58b1ced8d3f6dc431688ed94d008e",
+   "url": "https://api.github.com/repos/strace/strace/commits/1cd3f5f844d58b1ced8d3f6dc431688ed94d008e"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0Ljg="
+ },
+ {
+  "name": "v4.7",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.7",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.7",
+  "commit": {
+   "sha": "417eb8861e5f4c81077cc0b1e8a495209d850db8",
+   "url": "https://api.github.com/repos/strace/strace/commits/417eb8861e5f4c81077cc0b1e8a495209d850db8"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0Ljc="
+ },
+ {
+  "name": "v4.6",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.6",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.6",
+  "commit": {
+   "sha": "03aefdadb20f3bdd05bf644dc2ce1e85758a5aee",
+   "url": "https://api.github.com/repos/strace/strace/commits/03aefdadb20f3bdd05bf644dc2ce1e85758a5aee"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjY="
+ },
+ {
+  "name": "v4.5.20",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.5.20",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.5.20",
+  "commit": {
+   "sha": "acbe51899abd3f7ce5de5aad7245bb3de642bfab",
+   "url": "https://api.github.com/repos/strace/strace/commits/acbe51899abd3f7ce5de5aad7245bb3de642bfab"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjUuMjA="
+ },
+ {
+  "name": "v4.5.19",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.5.19",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.5.19",
+  "commit": {
+   "sha": "7d9247e197e82bb053f4357519265538298862ce",
+   "url": "https://api.github.com/repos/strace/strace/commits/7d9247e197e82bb053f4357519265538298862ce"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjUuMTk="
+ },
+ {
+  "name": "v4.5.18",
+  "zipball_url": "https://api.github.com/repos/strace/strace/zipball/refs/tags/v4.5.18",
+  "tarball_url": "https://api.github.com/repos/strace/strace/tarball/refs/tags/v4.5.18",
+  "commit": {
+   "sha": "09db705c510dcb72044e6a5f68722ae64d9924a5",
+   "url": "https://api.github.com/repos/strace/strace/commits/09db705c510dcb72044e6a5f68722ae64d9924a5"
+  },
+  "node_id": "MDM6UmVmMjkwNDIzMDA6cmVmcy90YWdzL3Y0LjUuMTg="
+ }
+]

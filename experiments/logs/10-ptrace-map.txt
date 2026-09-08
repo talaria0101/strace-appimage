@@ -1,0 +1,19 @@
+# conditions
+Linux sandbox 6.18.39-gentoo-dist-bin #1 SMP PREEMPT_DYNAMIC Sat Jul 18 18:23:53 -00 2026 x86_64 AMD Ryzen 7 7700 8-Core Processor AuthenticAMD GNU/Linux
+Tue Sep  8 11:59:04 UTC 2026
+uid: 0  (uid_map:          0       1000          1 )
+CapEff:	000001ffffffffff
+NoNewPrivs:	1
+Seccomp:	2
+Seccomp_filters:	1
+
+TRACEME    (0) -> ret=-1 errno=1 (Operation not permitted)
+ATTACH     (0x10) -> ret=-1 errno=1 (Operation not permitted)
+SEIZE      (0x4206) -> ret=-1 errno=1 (Operation not permitted)
+BOGUS_REQ  (0x9999) -> ret=-1 errno=1 (Operation not permitted)
+
+ptrace: DENIED (seccomp ERRNO(EPERM) on the syscall itself;
+even the bogus request answers EPERM, so the kernel never
+validates arguments -- this is a filter, not YAMA/LSM).
+Live-trace experiments (50-, 60-) will exit 2 on this host;
+run them on an unrestricted host.

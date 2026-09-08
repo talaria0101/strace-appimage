@@ -1,31 +1,133 @@
-strace - the linux syscall tracer
-=================================
+# strace-appimage
 
-This is [strace](https://strace.io) -- a diagnostic, debugging and instructional userspace utility with a traditional command-line interface for Linux.  It is used to monitor and tamper with interactions between processes and the Linux kernel, which include system calls, signal deliveries, and changes of process state.  The operation of strace is made possible by the kernel feature known as [ptrace](http://man7.org/linux/man-pages/man2/ptrace.2.html).
+`strace` + `LD_DEBUG=libs <app>` + `lib4bin`, in one tracer, for people
+who package AppImages — and for the agents that help them.
 
-strace is released under the terms of [the GNU Lesser General Public License version 2.1 or later](LGPL-2.1-or-later); see the file [COPYING](COPYING) for details.
-strace test suite is released under the terms of [the GNU General Public License version 2 or later](tests/GPL-2.0-or-later); see the file [tests/COPYING](tests/COPYING) for details.
+This is a vendored strace tree (cloned from
+[strace/strace](https://github.com/strace/strace) at
+`32415d06a`, edited in place; **not** a GitHub fork, so it stays out of
+the fork network) carrying a small patchset that adds five options:
 
-See the file [NEWS](NEWS) for information on what has changed in recent versions.
+| option | replaces | what it does |
+| --- | --- | --- |
+| `--json` | `strace \| grep/awk` parsing | one self-contained JSON object per line: syscall, args, decoded paths, fd paths, ret + errno name, duration, wall time, notes — plus `begin`/`summary` events. `jq`-ready |
+| `--report-files[=FILE]` | `LD_DEBUG=libs` scraping + `lib4bin` | end-of-run report of every path every tracee touched, with per-operation counts and outcomes; `.so` paths marked as libraries; missing-display/device hints |
+| `--anti-anti-debug` | hand-rolled ptrace dodges | `ptrace(PTRACE_TRACEME)` self-checks return success; `TracerPid` in tracee reads of `/proc/*/status` is rewritten digit-for-digit to zeroes (length- and offset-preserving) |
+| `--keep-alive[=N]` | `sleep N; kill %1` guesswork | suppresses `exit_group` up to N times per process (the same skip mechanism `-e inject=` uses), returning success, so programs that give up early keep going and reveal more calls |
+| `--packager` | the `xvfb-run` + `set -m` + env-var dance in packaging scripts | preset: `--follow-forks --decode-fds=all --report-files --keep-alive=3` |
 
-## Documentation
+Works on static and static-PIE binaries (it reads syscall arguments, not
+the dynamic loader), needs no root and no eBPF/capabilities — if you can
+run the binary, you can trace it.
 
-- [Developer Documentation](doc/README.md) - Comprehensive documentation index for contributors
-- [Contributing Guide](CONTRIBUTING.md) - How to contribute to strace
-- [Building from Git](INSTALL-git.md) - Build instructions for git repository
-- [User Manual](doc/strace.1.in) - Man page (also available as `man strace` after installation)
-- [Security Policy](SECURITY.md) - Vulnerability reporting and security information
+```sh
+./bootstrap && ./configure --enable-mpers=no && make
+./src/strace --packager --json -o trace.jsonl --report-files=files.json ./Your.AppImage
+jq -c 'select(.errno!=null)' trace.jsonl          # everything that failed, typed
+jq -r '.entries | keys[] | select(test(".so"))' files.json   # libs it wanted
+```
 
-Development of strace primarily takes place on
-[GitHub](https://github.com/strace/strace) -- everyone is welcome to open
-issues for bug reports and feature requests, submit pull requests, and
-participate in code reviews.
-The [strace mailing list](https://lists.strace.io/mailman/listinfo/strace-devel)
-is also available for discussions and patch submissions, the archives are at
-https://lists.strace.io/pipermail/strace-devel/ and other archival sites.
+A `--json` event looks like:
 
-The GIT repository of strace is available at [GitHub](https://github.com/strace/strace/).
+```json
+{"type":"syscall","pid":4242,"syscall":"openat","args":[-100,139867348693408,524288,0,0],"paths":["/usr/lib/libGL.so.1"],"ret":-1,"errno":"ENOENT","dur_us":3,"time":1757337601.123456,"line":"openat(AT_FDCWD, \"/usr/lib/libGL.so.1\", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)"}
+```
 
-Strace packages are available downstream [![in many repositories](https://repology.org/badge/tiny-repos/strace.svg)](https://repology.org/project/strace/versions).
+and a `--report-files` entry like:
 
-[![CI](https://github.com/strace/strace/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/strace/strace/actions/workflows/ci.yml?query=branch%3Amaster) [![Code Coverage](https://codecov.io/github/strace/strace/coverage.svg?branch=master)](https://codecov.io/github/strace/strace?branch=master)
+```json
+"entries":{"/usr/lib/libGL.so.1":{"library":true,"first_pid":4242,"ops":{"open":{"n":1,"ok":0,"last_errno":"ENOENT"}}}}
+```
+
+Full option documentation is in `doc/strace.1.in` (section
+*Strace-appimage extension options*).
+
+## Verify it yourself
+
+Nothing here asks for trust. The whole claim set is executable:
+
+```sh
+experiments/10-probe-host.sh        # can this host ptrace at all?
+experiments/20-build-strace.sh      # patched tree builds (-Werror)
+experiments/30-unit-tests.sh        # JSON escaper + report collector units
+experiments/40-option-wiring.sh     # options wired and validated
+tests-ext/validate.sh               # full A/B matrix vs vanilla strace
+experiments/50-live-comparison.sh   # side-by-side evidence, per claim
+```
+
+`tests-ext/validate.sh` builds the deliberately hostile targets in
+`tests-ext/testbin/` (an anti-debug detector that exits 42 when traced,
+an early-exiting display prober with a hidden dlopen fallback path, and
+a static variant that `LD_DEBUG=libs` cannot see into at all) and
+asserts observable outcomes, vanilla vs patched. Exit codes: 0 passed,
+1 failed, 2 *cannot run here* (e.g. ptrace restricted by a sandbox
+seccomp filter) — never silent.
+
+The development host for this repository is exactly such a sandbox
+(`experiments/logs/10-ptrace-map.txt`: every `ptrace` request, including
+a bogus one, answers `EPERM` before argument validation, so no tracer —
+vanilla included — runs there). That is why the ptrace-free layers are
+pinned by committed logs on this host, and the live A/B matrix is a
+script any third party runs on an unrestricted one.
+
+## Why these five, in particular
+
+The packaging scripts this targets
+([`quick-sharun.sh`](references/quick-sharun.sh) in
+pkgforge-dev/Anylinux-AppImages) already do all of this the hard way,
+and the file documents the pain in its own words:
+
+| pain in the status quo | handled by |
+| --- | --- |
+| "`xvfb-run` is used in strace mode to provide a display ... GUI apps will not run without display!" (and hard `sleep 5` when missing) | `--report-files` records what a display-less run attempted *and* emits a `missing_display_or_device` hint; `--keep-alive` pushes past early exits |
+| `STRACE_TIME` seconds to run the application, then `_kill_tree` | `--keep-alive[=N]` (bounded, per-process, visible in the trace) |
+| `LD_DEBUG=libs` output scraped with `awk '/calling init/{print $NF}'` plus an ever-growing `sed` blacklist | `--report-files` (JSON or text), no post-processing, no blacklist |
+| `ELECTRON_DISABLE_SANDBOX`/`WEBKIT_DISABLE_SANDBOX` exported so web apps survive `LD_DEBUG` mode | orthogonal (tracee environment), but the tracer no longer depends on the app surviving a full run to learn its library set |
+| `LD_DEBUG` sees nothing for static binaries, nothing outside `ld.so`, nothing after an early exit | syscall-level capture sees all three |
+| apps that detect ptrace and quit (upstream issue 227, closed as out of scope for a tracer) | `--anti-anti-debug` |
+
+Upstream's own tracker has the standing asks these options answer:
+machine-readable output (issues 169, 166, 51; changesets 228 and 286
+were never merged), and anti-debug countermeasures (issue 227). This
+tree patches them in place; see `patches/PATCHES.md` for the registry.
+
+## Known limits (read before relying on a feature)
+
+* `--anti-anti-debug` does **not** cover timing checks (`rdtsc` around
+  syscalls), `/proc/<pid>/wchan` (reads `ptrace_stop` while stopped), or
+  `PTRACE_ATTACH` self-checks (spoofing ATTACH success would hang the
+  caller in `wait(2)` forever). Documented in the man page.
+* `--keep-alive` returns success from a suppressed `exit_group`; what
+  the program does *after* its own exit call is up to the program (glibc
+  `_exit` ends in `hlt`, which faults). It reliably extends programs
+  that probe-and-retry or call `exit_group` from handled paths; it is a
+  diagnostic tool, not a display emulator.
+* `--json` is a pragmatic event stream over the existing decoders, not
+  the full structured-output driver upstream issue 169 envisions (no
+  per-field types for every argument; the classic decoded line ships
+  inside each event as `line`).
+* `-ff`/`--output-separately` and `-c` are rejected with `--json`.
+
+## About the vendored tree
+
+The upstream strace README is preserved verbatim at
+[README-strace.md](README-strace.md); this file is the repository's own
+front page.
+
+## Layout
+
+| path | what |
+| --- | --- |
+| `src/`, `doc/`, `tests/`, ... | the vendored strace tree, patched in place |
+| `src/tracing_ext.[ch]`, `src/json_out.c`, `src/file_report.c`, `src/anti_debug.c` | the extension implementation |
+| `tests-ext/` | validation suite: hostile test targets, unit tests, `validate.sh` |
+| `experiments/` | numbered, re-runnable experiment scripts + committed logs |
+| `patches/PATCHES.md` | the patch registry (what/why/repro/upstream refs) and the derived series in `patches/series/` |
+| `references/` | the study corpus: strace's tracker (fetched by `mine-repo.sh`, see its `PROVENANCE.md`), `quick-sharun.sh`, the Anylinux README |
+| `docs/reviews/` | the three documented review passes |
+
+## Licence
+
+LGPL-2.1-or-later, as strace. The extension files carry the same
+licence header. `references/quick-sharun.sh` is kept for study and
+remains the property of its authors (see its own header).

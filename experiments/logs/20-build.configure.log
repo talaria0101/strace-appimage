@@ -1,0 +1,564 @@
+checking for a BSD-compatible install... /usr/bin/install -c
+checking whether sleep supports fractional seconds... yes
+checking filesystem timestamp resolution... 0.01
+checking whether build environment is sane... yes
+checking for a race-free mkdir -p... /usr/bin/mkdir -p
+checking for gawk... gawk
+checking whether make sets $(MAKE)... yes
+checking whether make supports nested variables... yes
+checking xargs -n works... yes
+checking whether UID '0' is supported by ustar format... yes
+checking whether GID '0' is supported by ustar format... yes
+checking how to create a ustar tar archive... gnutar
+checking whether to enable maintainer-specific portions of Makefiles... no
+checking build system type... x86_64-pc-linux-gnu
+checking host system type... x86_64-pc-linux-gnu
+checking for gcc... gcc
+checking whether the C compiler works... yes
+checking for C compiler default output file name... a.out
+checking for suffix of executables... 
+checking whether we are cross compiling... no
+checking for suffix of object files... o
+checking whether the compiler supports GNU C... yes
+checking whether gcc accepts -g... yes
+checking for gcc option to enable C11 features... none needed
+checking whether gcc understands -c and -o together... yes
+checking whether make supports the include directive... yes (GNU style)
+checking dependency style of gcc... gcc3
+checking how to run the C preprocessor... gcc -E
+checking for ranlib... ranlib
+checking whether ln -s works... yes
+checking for stdio.h... yes
+checking for stdlib.h... yes
+checking for string.h... yes
+checking for inttypes.h... yes
+checking for stdint.h... yes
+checking for strings.h... yes
+checking for sys/stat.h... yes
+checking for sys/types.h... yes
+checking for unistd.h... yes
+checking for wchar.h... yes
+checking for minix/config.h... no
+checking whether it is safe to define __EXTENSIONS__... yes
+checking whether _XOPEN_SOURCE should be defined... no
+checking for a sed that does not truncate output... /usr/bin/sed
+checking whether to build with code coverage support... no
+checking whether byte ordering is bigendian... no
+checking for supported architecture... x86_64
+checking whether to use bundled linux kernel headers... yes
+checking whether gcc is fresh enough for -Werror... yes
+checking whether to try gcc with -Werror by default... yes
+checking whether gcc handles -Werror -Wunknown-warning-option... no
+checking whether gcc handles -Wall... yes
+checking whether gcc handles -Wextra... yes
+checking whether gcc handles -Wno-missing-field-initializers... yes
+checking whether gcc handles -Wno-unused-parameter... yes
+checking whether gcc handles -Wdate-time... yes
+checking whether gcc handles -Wformat-security... yes
+checking whether gcc handles -Wimplicit-fallthrough=5... yes
+checking whether gcc handles -Winit-self... yes
+checking whether gcc handles -Winitializer-overrides... no
+checking whether gcc handles -Wlogical-op... yes
+checking whether gcc handles -Wmissing-prototypes... yes
+checking whether gcc handles -Wnested-externs... yes
+checking whether gcc handles -Wold-style-definition... yes
+checking whether gcc handles -Wtrampolines... yes
+checking whether gcc handles -Wundef... yes
+checking whether gcc handles -Wwrite-strings... yes
+checking whether gcc handles -Werror... yes
+checking whether gcc handles -Wno-error=unterminated-string-initialization... yes
+checking whether gcc handles -Wno-error=stringop-overflow... yes
+checking whether gcc handles -gdwarf-aranges... no
+configure: looking for a C compiler that generates native executables
+checking for gcc... gcc
+checking whether the compiler supports GNU C... yes
+checking whether gcc accepts -g... yes
+checking for gcc option to enable C11 features... none needed
+checking whether gcc understands -c and -o together... yes
+checking dependency style of gcc... gcc3
+checking how to run the C preprocessor... gcc -E
+checking whether gcc is fresh enough for -Werror... yes
+checking whether to try gcc with -Werror by default... yes
+checking whether gcc handles -Werror -Wunknown-warning-option... no
+checking whether gcc handles -Wall... yes
+checking whether gcc handles -Wextra... yes
+checking whether gcc handles -Wno-missing-field-initializers... yes
+checking whether gcc handles -Wno-unused-parameter... yes
+checking whether gcc handles -Wdate-time... yes
+checking whether gcc handles -Wformat-security... yes
+checking whether gcc handles -Wimplicit-fallthrough=5... yes
+checking whether gcc handles -Winit-self... yes
+checking whether gcc handles -Winitializer-overrides... no
+checking whether gcc handles -Wlogical-op... yes
+checking whether gcc handles -Wmissing-prototypes... yes
+checking whether gcc handles -Wnested-externs... yes
+checking whether gcc handles -Wold-style-definition... yes
+checking whether gcc handles -Wtrampolines... yes
+checking whether gcc handles -Wundef... yes
+checking whether gcc handles -Wwrite-strings... yes
+checking whether gcc handles -Werror... yes
+checking whether gcc handles -Wno-error=unterminated-string-initialization... yes
+checking whether gcc handles -Wno-error=stringop-overflow... yes
+checking for ar... ar
+checking the archiver (ar) interface... ar
+checking for typeof syntax and keyword spelling... typeof
+checking for uid_t... yes
+checking for gid_t... yes
+checking for accept4... yes
+checking for be64toh... no
+checking for fallocate... yes
+checking for fanotify_mark... yes
+checking for fcntl64... yes
+checking for fopen64... yes
+checking for fork... yes
+checking for fputs_unlocked... yes
+checking for fstatat... yes
+checking for ftruncate... yes
+checking for futimens... yes
+checking for iconv_open... yes
+checking for if_indextoname... yes
+checking for mempcpy... yes
+checking for open64... yes
+checking for open_memstream... yes
+checking for preadv... yes
+checking for process_vm_readv... yes
+checking for process_vm_writev... yes
+checking for pwritev... yes
+checking for readahead... yes
+checking for signalfd... yes
+checking for stpcpy... yes
+checking for strerror... yes
+checking for strndup... yes
+checking for sync_file_range... yes
+checking for sig_atomic_t... yes
+checking for struct sigcontext... yes
+checking for struct sockaddr_storage... yes
+checking for struct mmsghdr... yes
+checking for __kernel_long_t... yes
+checking for __kernel_ulong_t... yes
+checking for struct stat64... no
+checking for struct __old_kernel_stat... yes
+checking for struct termios2... yes
+checking for struct termios.c_ispeed... no
+checking for struct termios.c_ospeed... no
+checking for struct user_desc... yes
+checking for struct user_desc.lm... yes
+checking for struct stat.st_mtime_nsec... yes
+checking for struct stat64.st_mtime_nsec... no
+checking for struct pt_all_user_regs... no
+checking for struct ia64_fpreg... no
+checking for struct ptrace_peeksiginfo_args... no
+checking for s390_compat_regs... no
+checking for struct utsname.domainname... yes
+checking for siginfo_t.si_syscall... yes
+checking for siginfo_t.si_timerid... yes
+checking for siginfo_t.si_overrun... yes
+checking for siginfo_t.si_pkey... yes
+checking for siginfo_t.si_trapno... no
+checking for siginfo_t.si_addr_lsb... yes
+checking for siginfo_t.si_lower... yes
+checking for siginfo_t.si_upper... yes
+checking for siginfo_t.si_perf_data... no
+checking for siginfo_t.si_perf_type... no
+checking for siginfo_t.si_perf_flags... no
+checking for asm/cachectl.h... no
+checking for asm/guarded_storage.h... no
+checking for asm/sysmips.h... no
+checking for elf.h... yes
+checking for gcov.h... yes
+checking for iconv.h... yes
+checking for linux/rxrpc.h... yes
+checking for mqueue.h... yes
+checking for netinet/sctp.h... no
+checking for paths.h... yes
+checking for scsi/sg.h... yes
+checking for sys/eventfd.h... yes
+checking for sys/fanotify.h... yes
+checking for sys/ipc.h... yes
+checking for sys/quota.h... yes
+checking for sys/signalfd.h... yes
+checking for sys/xattr.h... yes
+checking for ustat.h... no
+checking for linux/ipx.h... no
+checking for netipx/ipx.h... yes
+checking for struct sockaddr_ipx... yes
+checking for linux/ipc.h... yes
+checking for linux/kvm.h... yes
+checking for asm/sigcontext.h... no
+checking for netinet/tcp.h... yes
+checking for netinet/udp.h... yes
+checking for linux/netfilter_arp/arp_tables.h... yes
+checking for linux/netfilter_bridge/ebtables.h... yes
+checking for linux/netfilter_ipv4/ip_tables.h... yes
+checking for linux/netfilter_ipv6/ip6_tables.h... yes
+checking for linux/bpf.h... yes
+checking for struct bpf_insn... yes
+checking for struct bpf_map_info... yes
+checking for struct bpf_prog_info... yes
+checking for struct bpf_map_info.btf_id... yes
+checking for struct bpf_map_info.btf_key_type_id... yes
+checking for struct bpf_map_info.btf_value_type_id... yes
+checking for struct bpf_map_info.btf_vmlinux_id... yes
+checking for struct bpf_map_info.btf_vmlinux_value_type_id... yes
+checking for struct bpf_map_info.hash... yes
+checking for struct bpf_map_info.hash_size... yes
+checking for struct bpf_map_info.id... yes
+checking for struct bpf_map_info.ifindex... yes
+checking for struct bpf_map_info.key_size... yes
+checking for struct bpf_map_info.map_extra... yes
+checking for struct bpf_map_info.map_flags... yes
+checking for struct bpf_map_info.max_entries... yes
+checking for struct bpf_map_info.name... yes
+checking for struct bpf_map_info.type... yes
+checking for struct bpf_map_info.value_size... yes
+checking for struct bpf_prog_info.attach_btf_id... yes
+checking for struct bpf_prog_info.attach_btf_obj_id... yes
+checking for struct bpf_prog_info.btf_id... yes
+checking for struct bpf_prog_info.created_by_uid... yes
+checking for struct bpf_prog_info.func_info... yes
+checking for struct bpf_prog_info.func_info_rec_size... yes
+checking for struct bpf_prog_info.id... yes
+checking for struct bpf_prog_info.ifindex... yes
+checking for struct bpf_prog_info.jited_func_lens... yes
+checking for struct bpf_prog_info.jited_ksyms... yes
+checking for struct bpf_prog_info.jited_line_info... yes
+checking for struct bpf_prog_info.jited_line_info_rec_size... yes
+checking for struct bpf_prog_info.jited_prog_insns... yes
+checking for struct bpf_prog_info.jited_prog_len... yes
+checking for struct bpf_prog_info.line_info... yes
+checking for struct bpf_prog_info.line_info_rec_size... yes
+checking for struct bpf_prog_info.load_time... yes
+checking for struct bpf_prog_info.map_ids... yes
+checking for struct bpf_prog_info.name... yes
+checking for struct bpf_prog_info.nr_func_info... yes
+checking for struct bpf_prog_info.nr_jited_func_lens... yes
+checking for struct bpf_prog_info.nr_jited_ksyms... yes
+checking for struct bpf_prog_info.nr_jited_line_info... yes
+checking for struct bpf_prog_info.nr_line_info... yes
+checking for struct bpf_prog_info.nr_map_ids... yes
+checking for struct bpf_prog_info.nr_prog_tags... yes
+checking for struct bpf_prog_info.prog_tags... yes
+checking for struct bpf_prog_info.recursion_misses... yes
+checking for struct bpf_prog_info.run_cnt... yes
+checking for struct bpf_prog_info.run_time_ns... yes
+checking for struct bpf_prog_info.tag... yes
+checking for struct bpf_prog_info.type... yes
+checking for struct bpf_prog_info.verified_insns... yes
+checking for struct bpf_prog_info.xlated_prog_insns... yes
+checking for struct bpf_prog_info.xlated_prog_len... yes
+checking for union bpf_attr.attach_bpf_fd... yes
+checking for union bpf_attr.attach_btf_id... yes
+checking for union bpf_attr.attach_flags... yes
+checking for union bpf_attr.attach_prog_fd... yes
+checking for union bpf_attr.attach_type... yes
+checking for union bpf_attr.batch.count... yes
+checking for union bpf_attr.batch.elem_flags... yes
+checking for union bpf_attr.batch.flags... yes
+checking for union bpf_attr.batch.in_batch... yes
+checking for union bpf_attr.batch.keys... yes
+checking for union bpf_attr.batch.map_fd... yes
+checking for union bpf_attr.batch.out_batch... yes
+checking for union bpf_attr.batch.values... yes
+checking for union bpf_attr.bpf_fd... yes
+checking for union bpf_attr.btf... yes
+checking for union bpf_attr.btf_fd... yes
+checking for union bpf_attr.btf_flags... yes
+checking for union bpf_attr.btf_id... yes
+checking for union bpf_attr.btf_key_type_id... yes
+checking for union bpf_attr.btf_log_buf... yes
+checking for union bpf_attr.btf_log_level... yes
+checking for union bpf_attr.btf_log_size... yes
+checking for union bpf_attr.btf_log_true_size... yes
+checking for union bpf_attr.btf_size... yes
+checking for union bpf_attr.btf_token_fd... yes
+checking for union bpf_attr.btf_value_type_id... yes
+checking for union bpf_attr.btf_vmlinux_value_type_id... yes
+checking for union bpf_attr.core_relo_cnt... yes
+checking for union bpf_attr.core_relo_rec_size... yes
+checking for union bpf_attr.core_relos... yes
+checking for union bpf_attr.enable_stats.type... yes
+checking for union bpf_attr.excl_prog_hash... yes
+checking for union bpf_attr.excl_prog_hash_size... yes
+checking for union bpf_attr.expected_attach_type... yes
+checking for union bpf_attr.expected_revision... yes
+checking for union bpf_attr.fd_array... yes
+checking for union bpf_attr.fd_array_cnt... yes
+checking for union bpf_attr.fd_by_id_token_fd... yes
+checking for union bpf_attr.file_flags... yes
+checking for union bpf_attr.flags... yes
+checking for union bpf_attr.func_info... yes
+checking for union bpf_attr.func_info_cnt... yes
+checking for union bpf_attr.func_info_rec_size... yes
+checking for union bpf_attr.info.bpf_fd... yes
+checking for union bpf_attr.info.info... yes
+checking for union bpf_attr.info.info_len... yes
+checking for union bpf_attr.inner_map_fd... yes
+checking for union bpf_attr.insn_cnt... yes
+checking for union bpf_attr.insns... yes
+checking for union bpf_attr.iter_create.flags... yes
+checking for union bpf_attr.iter_create.link_fd... yes
+checking for union bpf_attr.kern_version... yes
+checking for union bpf_attr.key... yes
+checking for union bpf_attr.key_size... yes
+checking for union bpf_attr.keyring_id... yes
+checking for union bpf_attr.license... yes
+checking for union bpf_attr.line_info... yes
+checking for union bpf_attr.line_info_cnt... yes
+checking for union bpf_attr.line_info_rec_size... yes
+checking for union bpf_attr.link_create.addrs... no
+checking for union bpf_attr.link_create.attach_type... yes
+checking for union bpf_attr.link_create.bpf_cookie... no
+checking for union bpf_attr.link_create.cnt... no
+checking for union bpf_attr.link_create.cookies... no
+checking for union bpf_attr.link_create.expected_revision... no
+checking for union bpf_attr.link_create.flags... yes
+checking for union bpf_attr.link_create.hooknum... no
+checking for union bpf_attr.link_create.ids... no
+checking for union bpf_attr.link_create.iter_info... yes
+checking for union bpf_attr.link_create.iter_info_len... yes
+checking for union bpf_attr.link_create.kprobe_multi... yes
+checking for union bpf_attr.link_create.netfilter... yes
+checking for union bpf_attr.link_create.offsets... no
+checking for union bpf_attr.link_create.path... no
+checking for union bpf_attr.link_create.path_fd... no
+checking for union bpf_attr.link_create.perf_event... yes
+checking for union bpf_attr.link_create.pf... no
+checking for union bpf_attr.link_create.pid... no
+checking for union bpf_attr.link_create.priority... no
+checking for union bpf_attr.link_create.prog_fd... yes
+checking for union bpf_attr.link_create.ref_ctr_offsets... no
+checking for union bpf_attr.link_create.relative_fd... no
+checking for union bpf_attr.link_create.relative_id... no
+checking for union bpf_attr.link_create.syms... no
+checking for union bpf_attr.link_create.target_btf_id... yes
+checking for union bpf_attr.link_create.target_fd... yes
+checking for union bpf_attr.link_create.target_ifindex... yes
+checking for union bpf_attr.link_create.tracing_multi... no
+checking for union bpf_attr.link_create.uprobe_multi... yes
+checking for union bpf_attr.link_detach.link_fd... yes
+checking for union bpf_attr.link_id... yes
+checking for union bpf_attr.link_update.flags... yes
+checking for union bpf_attr.link_update.link_fd... yes
+checking for union bpf_attr.link_update.new_prog_fd... yes
+checking for union bpf_attr.link_update.old_prog_fd... yes
+checking for union bpf_attr.log_buf... yes
+checking for union bpf_attr.log_level... yes
+checking for union bpf_attr.log_size... yes
+checking for union bpf_attr.log_true_size... yes
+checking for union bpf_attr.map_extra... yes
+checking for union bpf_attr.map_fd... yes
+checking for union bpf_attr.map_flags... yes
+checking for union bpf_attr.map_id... yes
+checking for union bpf_attr.map_ifindex... yes
+checking for union bpf_attr.map_name... yes
+checking for union bpf_attr.map_token_fd... yes
+checking for union bpf_attr.map_type... yes
+checking for union bpf_attr.max_entries... yes
+checking for union bpf_attr.next_id... yes
+checking for union bpf_attr.next_key... yes
+checking for union bpf_attr.numa_node... yes
+checking for union bpf_attr.open_flags... yes
+checking for union bpf_attr.path_fd... yes
+checking for union bpf_attr.pathname... yes
+checking for union bpf_attr.prog_assoc_struct_ops... no
+checking for union bpf_attr.prog_bind_map.flags... yes
+checking for union bpf_attr.prog_bind_map.map_fd... yes
+checking for union bpf_attr.prog_bind_map.prog_fd... yes
+checking for union bpf_attr.prog_btf_fd... yes
+checking for union bpf_attr.prog_flags... yes
+checking for union bpf_attr.prog_id... yes
+checking for union bpf_attr.prog_ifindex... yes
+checking for union bpf_attr.prog_name... yes
+checking for union bpf_attr.prog_stream_read.prog_fd... yes
+checking for union bpf_attr.prog_stream_read.stream_buf... yes
+checking for union bpf_attr.prog_stream_read.stream_buf_len... yes
+checking for union bpf_attr.prog_stream_read.stream_id... yes
+checking for union bpf_attr.prog_token_fd... yes
+checking for union bpf_attr.prog_type... yes
+checking for union bpf_attr.query.attach_flags... yes
+checking for union bpf_attr.query.attach_type... yes
+checking for union bpf_attr.query.dummy... no
+checking for union bpf_attr.query.link_attach_flags... yes
+checking for union bpf_attr.query.link_ids... yes
+checking for union bpf_attr.query.prog_attach_flags... yes
+checking for union bpf_attr.query.prog_cnt... yes
+checking for union bpf_attr.query.prog_ids... yes
+checking for union bpf_attr.query.query_flags... yes
+checking for union bpf_attr.query.revision... yes
+checking for union bpf_attr.query.target_fd... yes
+checking for union bpf_attr.query.target_ifindex... yes
+checking for union bpf_attr.raw_tracepoint.cookie... yes
+checking for union bpf_attr.raw_tracepoint.dummy... no
+checking for union bpf_attr.raw_tracepoint.name... yes
+checking for union bpf_attr.raw_tracepoint.prog_fd... yes
+checking for union bpf_attr.relative_fd... yes
+checking for union bpf_attr.relative_id... yes
+checking for union bpf_attr.replace_bpf_fd... yes
+checking for union bpf_attr.signature... yes
+checking for union bpf_attr.signature_size... yes
+checking for union bpf_attr.start_id... yes
+checking for union bpf_attr.target_fd... yes
+checking for union bpf_attr.target_ifindex... yes
+checking for union bpf_attr.task_fd_query.buf... yes
+checking for union bpf_attr.task_fd_query.buf_len... yes
+checking for union bpf_attr.task_fd_query.fd... yes
+checking for union bpf_attr.task_fd_query.fd_type... yes
+checking for union bpf_attr.task_fd_query.flags... yes
+checking for union bpf_attr.task_fd_query.pid... yes
+checking for union bpf_attr.task_fd_query.probe_addr... yes
+checking for union bpf_attr.task_fd_query.probe_offset... yes
+checking for union bpf_attr.task_fd_query.prog_id... yes
+checking for union bpf_attr.test.batch_size... yes
+checking for union bpf_attr.test.cpu... yes
+checking for union bpf_attr.test.ctx_in... yes
+checking for union bpf_attr.test.ctx_out... yes
+checking for union bpf_attr.test.ctx_size_in... yes
+checking for union bpf_attr.test.ctx_size_out... yes
+checking for union bpf_attr.test.data_in... yes
+checking for union bpf_attr.test.data_out... yes
+checking for union bpf_attr.test.data_size_in... yes
+checking for union bpf_attr.test.data_size_out... yes
+checking for union bpf_attr.test.duration... yes
+checking for union bpf_attr.test.flags... yes
+checking for union bpf_attr.test.prog_fd... yes
+checking for union bpf_attr.test.repeat... yes
+checking for union bpf_attr.test.retval... yes
+checking for union bpf_attr.token_create.bpffs_fd... yes
+checking for union bpf_attr.token_create.flags... yes
+checking for union bpf_attr.value... yes
+checking for union bpf_attr.value_size... yes
+checking for union bpf_attr.value_type_btf_obj_fd... yes
+checking for union bpf_attr.dummy... no
+checking for bluetooth/bluetooth.h... yes
+checking for struct sockaddr_hci.hci_channel... yes
+checking for struct sockaddr_l2.l2_bdaddr_type... yes
+checking for struct statfs... yes
+checking for struct statfs.f_frsize... yes
+checking for struct statfs.f_flags... yes
+checking for struct statfs.f_fsid.val... yes
+checking for struct statfs.f_fsid.__val... no
+checking for struct statfs64... yes
+checking for struct statfs64.f_frsize... yes
+checking for struct statfs64.f_flags... yes
+checking for struct statfs64.f_fsid.val... yes
+checking for struct statfs64.f_fsid.__val... no
+checking for struct kbdiacruc... yes
+checking for struct kbdiacrsuc... yes
+checking for struct kvm_cpuid2... yes
+checking for struct kvm_regs... yes
+checking for struct kvm_sregs... yes
+checking for struct kvm_userspace_memory_region... yes
+checking for struct kvm_run.immediate_exit... yes
+checking for struct kvm_run.flags... yes
+checking for struct tcp_diag_md5sig... yes
+checking whether <linux/signal.h> can be used along with <signal.h>... no
+checking for struct __aio_sigset... no
+checking for struct iocb.aio_flags... yes
+checking for struct iocb.aio_rw_flags... yes
+checking for gcc options needed to detect all undeclared functions... none needed
+checking whether IEEE802154_ADDR_NONE is declared... no
+checking whether IEEE802154_ADDR_SHORT is declared... no
+checking whether IEEE802154_ADDR_LONG is declared... no
+checking whether LO_FLAGS_READ_ONLY is declared... yes
+checking whether LO_FLAGS_USE_AOPS is declared... no
+checking whether LO_FLAGS_AUTOCLEAR is declared... yes
+checking whether LO_FLAGS_PARTSCAN is declared... yes
+checking whether LO_FLAGS_DIRECT_IO is declared... yes
+checking whether XFRM_MSG_NEWSA is declared... yes
+checking whether XFRM_MSG_DELSA is declared... yes
+checking whether XFRM_MSG_GETSA is declared... yes
+checking whether XFRM_MSG_NEWPOLICY is declared... yes
+checking whether XFRM_MSG_DELPOLICY is declared... yes
+checking whether XFRM_MSG_GETPOLICY is declared... yes
+checking whether XFRM_MSG_ALLOCSPI is declared... yes
+checking whether XFRM_MSG_ACQUIRE is declared... yes
+checking whether XFRM_MSG_EXPIRE is declared... yes
+checking whether XFRM_MSG_UPDPOLICY is declared... yes
+checking whether XFRM_MSG_UPDSA is declared... yes
+checking whether XFRM_MSG_POLEXPIRE is declared... yes
+checking whether XFRM_MSG_FLUSHSA is declared... yes
+checking whether XFRM_MSG_FLUSHPOLICY is declared... yes
+checking whether XFRM_MSG_NEWAE is declared... yes
+checking whether XFRM_MSG_GETAE is declared... yes
+checking whether XFRM_MSG_REPORT is declared... yes
+checking whether XFRM_MSG_MIGRATE is declared... yes
+checking whether XFRM_MSG_NEWSADINFO is declared... yes
+checking whether XFRM_MSG_GETSADINFO is declared... yes
+checking whether XFRM_MSG_NEWSPDINFO is declared... yes
+checking whether XFRM_MSG_GETSPDINFO is declared... yes
+checking whether XFRM_MSG_MAPPING is declared... yes
+checking whether XFRM_MSG_SETDEFAULT is declared... yes
+checking whether XFRM_MSG_GETDEFAULT is declared... yes
+checking whether XFRM_MSG_MIGRATE_STATE is declared... no
+checking whether PTP_PF_NONE is declared... no
+checking whether PTP_PF_EXTTS is declared... no
+checking whether PTP_PF_PEROUT is declared... no
+checking whether PTP_PF_PHYSYNC is declared... no
+checking whether NFEA_UNSPEC is declared... no
+checking whether NFEA_ACTIVITY_NOTIFY is declared... no
+checking whether NFEA_DONT_REFRESH is declared... no
+checking whether TCA_ACT_UNSPEC is declared... yes
+checking whether TCA_ACT_KIND is declared... yes
+checking whether TCA_ACT_OPTIONS is declared... yes
+checking whether TCA_ACT_INDEX is declared... yes
+checking whether TCA_ACT_STATS is declared... yes
+checking whether TCA_ACT_PAD is declared... yes
+checking whether TCA_ACT_COOKIE is declared... yes
+checking whether TCA_ACT_FLAGS is declared... yes
+checking whether TCA_ACT_HW_STATS is declared... yes
+checking whether TCA_ACT_USED_HW_STATS is declared... yes
+checking whether TCA_ACT_IN_HW_COUNT is declared... yes
+checking whether P_ALL is declared... yes
+checking whether P_PID is declared... yes
+checking whether P_PGID is declared... yes
+checking whether P_PIDFD is declared... yes
+checking whether sys_errlist is declared... no
+checking whether PTRACE_PEEKUSER is declared... yes
+checking whether PTRACE_POKEUSER is declared... yes
+checking size of long... 8
+checking size of long long... 8
+checking size of off_t... 8
+checking size of kernel_long_t... 8
+checking size of struct i64_i32... 16
+checking size of struct msqid64_ds... 120
+checking for SIGRTMIN... 32
+checking for SA_RESTORER... 0x04000000
+checking for __builtin_popcount... yes
+checking for program_invocation_name... yes
+checking for static_assert... yes
+checking for library containing dladdr... none required
+checking for library containing timer_create... none required
+checking for library containing clock_gettime... none required
+checking for library containing log10... -lm
+checking for library containing mq_open... none required
+checking for termcap.h... yes
+checking for library containing tgetnum... -ltinfo
+checking for readelf... readelf
+checking for elfutils/libdwfl.h... yes
+checking for dwfl_linux_proc_attach in -ldw... yes
+checking for elfutils version... 195
+checking whether to enable stack tracing support... yes, using libdw
+checking for demangle.h... no
+checking for libiberty/demangle.h... yes
+checking for cplus_demangle in -liberty... yes
+checking whether to enable symbols demangling in stack trace... yes
+checking for selinux/selinux.h... no
+checking whether to enable security contexts support... no
+checking whether to enable m32 personality support... no
+checking whether to enable mx32 personality support... no
+checking for valgrind... no
+checking that generated files are newer than configure... done
+configure: creating ./config.status
+config.status: creating Makefile
+config.status: creating bundled/Makefile
+config.status: creating debian/changelog
+config.status: creating doc/strace.1
+config.status: creating doc/strace-log-merge.1
+config.status: creating src/Makefile
+config.status: creating strace.spec
+config.status: creating tests/Makefile
+config.status: creating tests-m32/Makefile
+config.status: creating tests-mx32/Makefile
+config.status: creating src/config.h
+config.status: src/config.h is unchanged
+config.status: executing depfiles commands

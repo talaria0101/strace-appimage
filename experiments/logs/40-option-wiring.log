@@ -1,0 +1,8 @@
+ok:   --json in --help
+ok:   --report-files in --help
+ok:   --anti-anti-debug in --help
+ok:   --keep-alive in --help
+ok:   --packager in --help
+src/strace: do_test_ptrace_get_syscall_info: PTRACE_TRACEME: Operation not permitted
+src/strace: attach: ptrace(PTRACE_SEIZE, 329642): Operation not permitted
+conditions: commit 32415d06a, 6.18.39-gentoo-dist-bin, Tue Sep  8 12:07:23 UTC 2026

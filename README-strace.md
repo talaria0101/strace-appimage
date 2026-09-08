@@ -1,0 +1,31 @@
+strace - the linux syscall tracer
+=================================
+
+This is [strace](https://strace.io) -- a diagnostic, debugging and instructional userspace utility with a traditional command-line interface for Linux.  It is used to monitor and tamper with interactions between processes and the Linux kernel, which include system calls, signal deliveries, and changes of process state.  The operation of strace is made possible by the kernel feature known as [ptrace](http://man7.org/linux/man-pages/man2/ptrace.2.html).
+
+strace is released under the terms of [the GNU Lesser General Public License version 2.1 or later](LGPL-2.1-or-later); see the file [COPYING](COPYING) for details.
+strace test suite is released under the terms of [the GNU General Public License version 2 or later](tests/GPL-2.0-or-later); see the file [tests/COPYING](tests/COPYING) for details.
+
+See the file [NEWS](NEWS) for information on what has changed in recent versions.
+
+## Documentation
+
+- [Developer Documentation](doc/README.md) - Comprehensive documentation index for contributors
+- [Contributing Guide](CONTRIBUTING.md) - How to contribute to strace
+- [Building from Git](INSTALL-git.md) - Build instructions for git repository
+- [User Manual](doc/strace.1.in) - Man page (also available as `man strace` after installation)
+- [Security Policy](SECURITY.md) - Vulnerability reporting and security information
+
+Development of strace primarily takes place on
+[GitHub](https://github.com/strace/strace) -- everyone is welcome to open
+issues for bug reports and feature requests, submit pull requests, and
+participate in code reviews.
+The [strace mailing list](https://lists.strace.io/mailman/listinfo/strace-devel)
+is also available for discussions and patch submissions, the archives are at
+https://lists.strace.io/pipermail/strace-devel/ and other archival sites.
+
+The GIT repository of strace is available at [GitHub](https://github.com/strace/strace/).
+
+Strace packages are available downstream [![in many repositories](https://repology.org/badge/tiny-repos/strace.svg)](https://repology.org/project/strace/versions).
+
+[![CI](https://github.com/strace/strace/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/strace/strace/actions/workflows/ci.yml?query=branch%3Amaster) [![Code Coverage](https://codecov.io/github/strace/strace/coverage.svg?branch=master)](https://codecov.io/github/strace/strace?branch=master)
