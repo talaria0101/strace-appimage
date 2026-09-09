@@ -1,7 +1,7 @@
 From 6ad3152f61db9cc9ea86ce48dc5e665034881395 Mon Sep 17 00:00:00 2001
 From: Talaria <324092415+talaria0101@users.noreply.github.com>
 Date: Tue, 8 Sep 2026 12:07:34 +0000
-Subject: [PATCH 1/7] add tracing extensions: --json, --report-files,
+Subject: [PATCH 1/9] add tracing extensions: --json, --report-files,
  --anti-anti-debug, --keep-alive, --packager
 
 Five packager-facing options built on a small per-tcb capture state

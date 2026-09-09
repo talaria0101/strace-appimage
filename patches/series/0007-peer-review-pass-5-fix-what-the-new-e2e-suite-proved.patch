@@ -1,7 +1,7 @@
 From 0e92fb0c70998121c7c1b3dd2fd7e7cc007e9761 Mon Sep 17 00:00:00 2001
 From: Talaria <324092415+talaria0101@users.noreply.github.com>
 Date: Wed, 9 Sep 2026 05:19:17 +0000
-Subject: [PATCH 7/7] peer review pass 5: fix what the new e2e suite proved;
+Subject: [PATCH 7/9] peer review pass 5: fix what the new e2e suite proved;
  close issues 2 and 3
 
 A from-scratch peer review of every claim in the repository, driven by

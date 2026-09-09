@@ -1,7 +1,7 @@
 From 8f84add47d3c05b1fa1891c318cd550730163ace Mon Sep 17 00:00:00 2001
 From: Talaria <324092415+talaria0101@users.noreply.github.com>
 Date: Tue, 8 Sep 2026 12:07:58 +0000
-Subject: [PATCH 3/7] patches: add the derived series for review and
+Subject: [PATCH 3/9] patches: add the derived series for review and
  attribution
 
 Regenerated with: git format-patch -o patches/series 32415d06a..HEAD
