@@ -1,7 +1,7 @@
 From 4b2f61310d308c0444f211449b330351a777aea5 Mon Sep 17 00:00:00 2001
 From: Talaria <324092415+talaria0101@users.noreply.github.com>
 Date: Tue, 8 Sep 2026 12:07:52 +0000
-Subject: [PATCH 2/2] add validation suite, experiments, reviews, and reference
+Subject: [PATCH 2/5] add validation suite, experiments, reviews, and reference
  corpus
 
 * tests-ext/: the self-contained validator (validate.sh), hostile test
