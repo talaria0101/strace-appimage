@@ -241,13 +241,32 @@ main(void)
 		    errno != ENOENT)
 			perror("NOTIF_SEND");
 
+		if (req.data.nr == __NR_exit_group)
+			break;	/* tracee is dying: reap below */
+
 		int st;
 		pid_t w = waitpid(pid, &st, WNOHANG);
 		if (w == pid) {
 			CHECK(WIFEXITED(st) && WEXITSTATUS(st) == 0,
-			      "tracee completed with forged + emulated syscalls");
+			      "tracee completed with forged/emulated syscalls");
 			break;
 		}
+		if (w < 0)
+			break;
+	}
+	/* the just-CONTINUEd exit_group races wait(2) visibility: poll */
+	for (int i = 0; i < 100; ++i) {
+		int st;
+		pid_t w = waitpid(pid, &st, WNOHANG);
+
+		if (w == pid) {
+			CHECK(WIFEXITED(st) && WEXITSTATUS(st) == 0,
+			      "tracee completed with forged/emulated syscalls");
+			break;
+		}
+		if (w < 0)
+			break;
+		usleep(20000);
 	}
 	CHECK(saw_write, "P3 saw write() notification, forged retval honored");
 	CHECK(saw_open, "P5 openat emulated via ADDFD");

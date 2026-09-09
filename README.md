@@ -10,15 +10,17 @@ the fork network) carrying a small patchset that adds five options:
 
 | option | replaces | what it does |
 | --- | --- | --- |
-| `--json` | `strace \| grep/awk` parsing | one self-contained JSON object per line: syscall, args, decoded paths, fd paths, ret + errno name, duration, wall time, notes — plus `begin`/`summary` events. `jq`-ready |
+| `--json` | `strace \| grep/awk` parsing | one self-contained JSON object per line: syscall, args, decoded paths, fd paths, ret + errno name, duration, wall time, notes — plus `begin`/`signal`/`exit`/`summary` events. `jq`-ready |
 | `--report-files[=FILE]` | `LD_DEBUG=libs` scraping + `lib4bin` | end-of-run report of every path every tracee touched, with per-operation counts and outcomes; `.so` paths marked as libraries; missing-display/device hints |
-| `--anti-anti-debug` | hand-rolled ptrace dodges | `ptrace(PTRACE_TRACEME)` self-checks return success; `TracerPid` in tracee reads of `/proc/*/status` is rewritten digit-for-digit to zeroes (length- and offset-preserving) |
-| `--keep-alive[=N]` | `sleep N; kill %1` guesswork | suppresses `exit_group` up to N times per process (the same skip mechanism `-e inject=` uses), returning success, so programs that give up early keep going and reveal more calls |
+| `--anti-anti-debug` | hand-rolled ptrace dodges | `ptrace(PTRACE_TRACEME)` self-checks return success; in ptrace mode `TracerPid` in tracee reads of `/proc/<pid>/status` is rewritten digit-for-digit to zeroes (length- and offset-preserving); in seccomp mode TracerPid is genuinely 0 — there is no tracer link |
+| `--keep-alive[=N]` | `sleep N; kill %1` guesswork | suppresses `exit_group` up to N times per process, returning success, so programs that give up early keep going and reveal more calls |
 | `--packager` | the `xvfb-run` + `set -m` + env-var dance in packaging scripts | preset: `--follow-forks --decode-fds=all --report-files --keep-alive=3` |
+| `--backend={auto,ptrace,seccomp}` | "strace needs ptrace" | `auto` (default) probes ptrace and **falls back to a seccomp user-notification backend** where the ptrace syscall class is denied: the tracee installs the filter on itself and hands the tracer the listener; `/proc/<pid>/mem` supplies memory arguments; open/openat are emulated with `SECCOMP_IOCTL_NOTIF_ADDFD` so their results are real |
 
 Works on static and static-PIE binaries (it reads syscall arguments, not
-the dynamic loader), needs no root and no eBPF/capabilities — if you can
-run the binary, you can trace it.
+the dynamic loader), needs no root and no eBPF/capabilities — **if you
+can run the binary, you can trace it**, including inside environments
+that ban ptrace outright (where plain strace cannot run at all).
 
 ```sh
 ./bootstrap && ./configure --enable-mpers=no && make
@@ -48,10 +50,11 @@ Nothing here asks for trust. The whole claim set is executable:
 
 ```sh
 experiments/10-probe-host.sh        # can this host ptrace at all?
+experiments/15-senotif-primitives.sh # the ptrace-free primitives, proven
 experiments/20-build-strace.sh      # patched tree builds (-Werror)
 experiments/30-unit-tests.sh        # JSON escaper + report collector units
 experiments/40-option-wiring.sh     # options wired and validated
-tests-ext/validate.sh               # full A/B matrix vs vanilla strace
+tests-ext/validate.sh               # full A/B matrix
 experiments/50-live-comparison.sh   # side-by-side evidence, per claim
 ```
 
@@ -59,16 +62,25 @@ experiments/50-live-comparison.sh   # side-by-side evidence, per claim
 `tests-ext/testbin/` (an anti-debug detector that exits 42 when traced,
 an early-exiting display prober with a hidden dlopen fallback path, and
 a static variant that `LD_DEBUG=libs` cannot see into at all) and
-asserts observable outcomes, vanilla vs patched. Exit codes: 0 passed,
-1 failed, 2 *cannot run here* (e.g. ptrace restricted by a sandbox
-seccomp filter) — never silent.
+asserts observable outcomes. Exit codes: 0 passed, 1 failed, 2 *cannot
+run here* — never silent.
 
-The development host for this repository is exactly such a sandbox
-(`experiments/logs/10-ptrace-map.txt`: every `ptrace` request, including
-a bogus one, answers `EPERM` before argument validation, so no tracer —
-vanilla included — runs there). That is why the ptrace-free layers are
-pinned by committed logs on this host, and the live A/B matrix is a
-script any third party runs on an unrestricted one.
+**These tests were run live, on the development host — a sandbox that
+denies ptrace outright** (`experiments/logs/10-ptrace-map.txt`: every
+`ptrace` request, including a bogus one, answers `EPERM` before
+argument validation; `/proc/<pid>/mem` writes and `process_vm_*` are
+denied the same way). Plain strace cannot trace there at all. The
+patched tracer does, via the seccomp user-notification backend — the
+last run recorded in `experiments/logs/50-live-comparison/table.md`
+shows, on that host: `LD_DEBUG=libs` scoring **0 hits** on the
+post-early-exit `dlopen("libGL.so.1")` that the report records, **0
+lines** of loader activity for the static binary the report covers
+(3 paths), and the validation matrix passing **25/25 assertions**
+(2 environmental skips documented inline).
+
+On ptrace-capable hosts everything additionally runs through the
+classic engine, including the TracerPid rewrite and the vanilla-vs-
+patched anti-debug A/B.
 
 ## Why these five, in particular
 

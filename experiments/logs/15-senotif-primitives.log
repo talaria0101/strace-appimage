@@ -6,4 +6,8 @@ ok:   P5a openat path fetched via /proc/mem
 ok:   P5b tracer-side open succeeded
 ok:   P5c ADDFD installed fd in tracee
 ok:   P6b tracee buffer readable back via /proc/mem
-probe exit=124
+ok:   tracee completed with forged/emulated syscalls
+ok:   P3 saw write() notification, forged retval honored
+ok:   P5 openat emulated via ADDFD
+ok:   P4 CONTINUE path exercised
+ALL PRIMITIVES WORK: 0 failures

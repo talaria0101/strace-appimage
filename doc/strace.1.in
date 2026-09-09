@@ -1988,6 +1988,39 @@ Preset for AppImage/library packaging work: enables
 .BR \-\-report\-files ,
 and
 .BR \-\-keep\-alive =3.
+.TP
+.BR \-\-backend = {\|auto\||ptrace\||seccomp\|}
+Choose the tracing mechanism (default
+.IR auto ).
+.B ptrace
+is the classic strace engine.
+.B seccomp
+is a ptrace\-free engine: the tracee installs a seccomp
+user\-notification filter over its own syscalls before exec and hands
+the listener to the tracer; memory arguments are fetched through
+.BR /proc/<pid>/mem ,
+open/openat are emulated in the tracer (fds installed with
+SECCOMP_IOCTL_NOTIF_ADDFD, so their results are real), and everything
+else executes normally (reported as
+.IR "? seccomp\-continued" ;
+.B \-\-json
+marks those events
+.IR continued ).
+This backend works wherever a program can run \(em no ptrace, no root,
+no eBPF \(em including environments where the ptrace syscall class is
+denied outright, where
+.I auto
+selects it with a notice.
+Its limits: no signal events; attaching to a running process
+.RB ( \-p )
+is impossible; the exit status of signal\-killed tracees is reported
+through wait(2) only; and syscalls that an outer security layer denies
+before the filter (kernel action precedence puts ERRNO above
+USER_NOTIF) are never seen, so a
+.B \-\-anti\-anti\-debug
+TRACEME spoof cannot un\-deny a host that forbids ptrace outright
+(though in this backend TracerPid is genuinely 0, since no tracer link
+exists).
 .SH DIAGNOSTICS
 When
 .I command

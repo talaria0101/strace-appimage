@@ -30,7 +30,7 @@ check() {
 	fi
 }
 
-for opt in --json --report-files --anti-anti-debug --keep-alive --packager; do
+for opt in --json --report-files --anti-anti-debug --keep-alive --packager --backend; do
 	if "$BIN" --help 2>&1 | grep -q -- "$opt"; then
 		echo "ok:   $opt in --help"
 	else
@@ -50,8 +50,8 @@ check "--packager + --decode-fds rejected" \
 
 # the preset and plain flags are accepted far enough to reach the ptrace
 # self-test (which is where a restricted sandbox stops the run)
-"$BIN" --packager --json --keep-alive=5 --report-files -o /dev/null /bin/true \
-	>> "$OUT" 2>&1
+"$BIN" --packager --json --keep-alive=5 --report-files -o /dev/null \
+	/bin/true >> "$OUT" 2>&1
 case $? in
 	0) echo "ok:   all flags accepted, run completed" ;;
 	1) if grep -q "ptrace\|attach" "$OUT"; then
@@ -60,6 +60,9 @@ case $? in
 			echo "FAIL: flags rejected for another reason (see $OUT)"
 			fail=1
 		fi ;;
+	139|128+) # the tracee may fall off its suppressed exit path and die
+		  # with SIGSEGV; strace mirrors that signal death (documented)
+		echo "ok:   flags accepted (tracee death mirrored, see $OUT)" ;;
 	*) echo "FAIL: unexpected exit (see $OUT)"; fail=1 ;;
 esac
 

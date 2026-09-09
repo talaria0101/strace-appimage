@@ -5,6 +5,10 @@ Noteworthy changes in release ?.? (????-??-??)
   * strace-appimage: added --json, --report-files, --anti-anti-debug,
     --keep-alive, and --packager options (see doc/strace.1.in and the
     repository README).
+  * strace-appimage: added --backend={auto,ptrace,seccomp}; the seccomp
+    user-notification backend traces ptrace-free (unprivileged tracee
+    seccomp filters + /proc/<pid>/mem + NOTIF_ADDFD emulation) and is
+    selected automatically where ptrace is denied.
   * Implemented decoding of fchroot syscall.
   * Implemented decoding of SO_RIGHTS_NOTRUNC socket option.
   * Implemented decoding of IFA_MC_USERS and IFA_PROTO netlink attributes.

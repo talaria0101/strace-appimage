@@ -1,16 +1,16 @@
-      9929:	find library=libc.so.6 [0]; searching
-      9929:	 search cache=/etc/ld.so.cache
-      9929:	  trying file=/usr/lib64/libc.so.6
-      9929:	
-      9929:	
-      9929:	calling init: /lib64/ld-linux-x86-64.so.2
-      9929:	
-      9929:	
-      9929:	calling init: /usr/lib64/libc.so.6
-      9929:	
-      9929:	
-      9929:	initialize program: tests-ext/testbin/hard_target
-      9929:	
-      9929:	
-      9929:	transferring control: tests-ext/testbin/hard_target
-      9929:	
+     12391:	find library=libc.so.6 [0]; searching
+     12391:	 search cache=/etc/ld.so.cache
+     12391:	  trying file=/usr/lib64/libc.so.6
+     12391:	
+     12391:	
+     12391:	calling init: /lib64/ld-linux-x86-64.so.2
+     12391:	
+     12391:	
+     12391:	calling init: /usr/lib64/libc.so.6
+     12391:	
+     12391:	
+     12391:	initialize program: tests-ext/testbin/hard_target
+     12391:	
+     12391:	
+     12391:	transferring control: tests-ext/testbin/hard_target
+     12391:	

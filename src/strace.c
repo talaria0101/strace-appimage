@@ -554,6 +554,10 @@ strace-appimage extensions:\n\
                  so short-lived or display-less runs reveal more calls\n\
   --packager     preset for AppImage/library packaging: --follow-forks,\n\
                  --decode-fds=all, --report-files, --keep-alive\n\
+  --backend=auto|ptrace|seccomp\n\
+                 tracing engine; auto (default) falls back to the\n\
+                 ptrace-free seccomp user-notification backend where\n\
+                 ptrace is denied\n\
 \nMiscellaneous:\n\
   -d, --debug    enable debug output to stderr\n\
   -h, --help     print help message\n\
