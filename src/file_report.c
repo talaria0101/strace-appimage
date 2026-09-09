@@ -150,7 +150,7 @@ entry_get_op(struct report_entry *e, int group)
 
 static void
 report_note(const char *path, int group, pid_t pid, bool ok,
-	    unsigned long err)
+	    unsigned long err, bool unknown)
 {
 	const unsigned int h = str_hash(path) % REPORT_HASH_SIZE;
 	struct report_entry *e;
@@ -173,6 +173,8 @@ report_note(const char *path, int group, pid_t pid, bool ok,
 	if (!o)
 		return;
 	++o->n;
+	if (unknown)
+		return;		/* CONTINUEd by the seccomp backend */
 	if (ok)
 		++o->ok;
 	else
@@ -194,8 +196,10 @@ file_report_note_syscall(struct tcb *tcp)
 				for (unsigned int k = 0;
 				     k < tcp->ext_npaths; ++k)
 					report_note(tcp->ext_paths[k], i,
-						     tcp->pid, !tcp->u_error,
-						     tcp->u_error);
+						     tcp->pid,
+						     !tcp->u_error,
+						     tcp->u_error,
+						     tcp->ext_continued);
 				return;
 			}
 }
@@ -267,7 +271,7 @@ file_report_dump_json(FILE *fp)
 			if (i)
 				fputc(',', fp);
 			ext_json_print_string(fp, e->path);
-			fprintf(fp, "\":{\"library\":%s,\"first_pid\":%d,"
+			fprintf(fp, ":{\"library\":%s,\"first_pid\":%d,"
 				   "\"ops\":{", e->library ? "true" : "false",
 				e->first_pid);
 			for (unsigned int j = 0; j < e->nops; ++j)
@@ -282,17 +286,17 @@ file_report_dump_json(FILE *fp)
 
 		for (unsigned long i = 0; i < report_nentries; ++i) {
 			struct report_entry *e = arr[i];
-			unsigned long fails = 0;
+			unsigned long attempts = 0;
 
 			for (unsigned int j = 0; j < e->nops; ++j)
-				fails += e->ops[j].n - e->ops[j].ok;
-			if (fails == 0)
+				attempts += e->ops[j].n;
+			if (attempts == 0)
 				continue;
 			if (is_display_or_device_probe(e->path)) {
 				fprintf(fp, "%s{\"hint\":"
 					   "\"missing_display_or_device\","
 					   "\"path\":\"%s\",\"attempts\":%lu}",
-					first ? "" : ",", e->path, fails);
+					first ? "" : ",", e->path, attempts);
 				first = false;
 			}
 		}

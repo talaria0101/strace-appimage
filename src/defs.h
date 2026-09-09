@@ -302,9 +302,13 @@ struct tcb {
 	 * paths captured for the syscall being decoded, human notes for it,
 	 * and the remaining --keep-alive budget of this process.
 	 */
+	int pmem_fd;		/* strace-appimage: cached /proc/<pid>/mem fd,
+				   -1 when not opened yet */
 	char *ext_paths[EXT_MAX_PATHS_PER_SYSCALL];
 	unsigned int ext_npaths;
 	char *ext_notes[EXT_MAX_NOTES_PER_SYSCALL];
+	bool ext_continued;	/* seccomp backend: syscall was CONTINUEd,
+				   its result is unknown */
 	unsigned int ext_nnotes;
 	int keepalive_left;
 
@@ -732,6 +736,10 @@ term_ioctl_decode_command_number(struct tcb *tcp,
  */
 extern int
 umoven(struct tcb *, kernel_ulong_t addr, unsigned int len, void *laddr);
+extern int pmem_read(struct tcb *, kernel_ulong_t addr, unsigned int len,
+		     void *laddr);
+extern int pmem_read_str(struct tcb *, kernel_ulong_t addr, unsigned int len,
+			 char *laddr);
 # define umove(pid, addr, objp)	\
 	umoven((pid), (addr), sizeof(*(objp)), (void *) (objp))
 

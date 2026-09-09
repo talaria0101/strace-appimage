@@ -1,0 +1,9 @@
+src/strace: ptrace is not available on this host; using the seccomp user-notification backend
+[target] TRACEME self-check: EPERM -> debugger! (vanilla strace stops here; --anti-anti-debug spoofs success)
+[target] TracerPid check: clean (0)
+[target] no display; real apps exit() here; exit_group(1) now (--keep-alive suppresses it)
+[target] fallback: dlopen libGL.so.1 -> loaded
+[target] fallback: dlopen libX11.so.6 -> loaded
+[target] fallback: open DejaVuSans.ttf -> ok
+[target] TracerPid check: clean (0)
+[target] done (anti-debug FIRED)

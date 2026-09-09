@@ -156,6 +156,13 @@ static bool detach_on_execve;
 static bool always_show_pid;
 
 static int exit_code;
+
+void
+strace_set_exit_code(int code)
+{
+	exit_code = code;
+	debug_msg("seccomp backend: exit code set to %d", code);
+}
 static int strace_child;
 static int strace_tracer_pid;
 
@@ -1094,6 +1101,7 @@ alloctcb(int pid)
 			memset(tcp, 0, sizeof(*tcp));
 			list_init(&tcp->wait_list);
 			tcp->pid = pid;
+			tcp->pmem_fd = -1;
 			tcp->keepalive_left = ext.keep_alive;
 			maybe_load_task_comm(tcp);
 #if SUPPORTED_PERSONALITIES > 1
@@ -1161,6 +1169,10 @@ droptcb(struct tcb *tcp)
 
 	free_tcb_priv_data(tcp);
 	ext_free_tcb(tcp);
+	if (tcp->pmem_fd >= 0) {
+		close(tcp->pmem_fd);
+		tcp->pmem_fd = -1;
+	}
 
 #ifdef ENABLE_STACKTRACE
 	if (stack_trace_mode)
@@ -2009,6 +2021,31 @@ startup_child(char **argv, char **env)
 	redirect_standard_fds();
 }
 
+enum trace_backend backend = BACKEND_AUTO;
+char **tracee_environ;
+
+/*
+ * Minimal ptrace probe: a child that TRACEMEs and exits.  On hosts
+ * where the ptrace syscall class is denied (EPERM for every request),
+ * the child exits 1 and the seccomp user-notification backend is used
+ * instead ("if you can run a binary, you can trace it").
+ */
+static bool
+ptrace_selftest_ok(void)
+{
+	pid_t pid = fork();
+
+	if (pid < 0)
+		return false;
+	if (pid == 0) {
+		_exit(ptrace(PTRACE_TRACEME, 0, 0, 0) < 0 ? 1 : 0);
+	}
+	int st;
+
+	waitpid(pid, &st, 0);
+	return WIFEXITED(st) && WEXITSTATUS(st) == 0;
+}
+
 static void
 test_ptrace_seize(void)
 {
@@ -2494,6 +2531,7 @@ init(int argc, char *argv[])
 		GETOPT_EXT_ANTI_ANTI_DEBUG,
 		GETOPT_EXT_KEEP_ALIVE,
 		GETOPT_EXT_PACKAGER,
+		GETOPT_EXT_BACKEND,
 	};
 	static const struct option longopts[] = {
 		{ "columns",		required_argument, 0, 'a' },
@@ -2654,6 +2692,16 @@ init(int argc, char *argv[])
 		}
 		case GETOPT_EXT_PACKAGER:
 			ext.packager = true;
+			break;
+		case GETOPT_EXT_BACKEND:
+			if (strcmp(optarg, "auto") == 0)
+				backend = BACKEND_AUTO;
+			else if (strcmp(optarg, "ptrace") == 0)
+				backend = BACKEND_PTRACE;
+			else if (strcmp(optarg, "seccomp") == 0)
+				backend = BACKEND_SECCOMP;
+			else
+				error_opt_arg(c, lopt, optarg);
 			break;
 		case 'e':
 			qualify(optarg);
@@ -3251,10 +3299,32 @@ init(int argc, char *argv[])
 	}
 
 	debug_msg("ptrace_setoptions = %#x", ptrace_setoptions);
-	test_ptrace_seize();
-	if (inject_set)
-		test_ptrace_set_syscall_info();
-	test_ptrace_get_syscall_info();
+
+	if (backend == BACKEND_AUTO) {
+		if (ptrace_selftest_ok()) {
+			backend = BACKEND_PTRACE;
+		} else if (senotif_supported()) {
+			backend = BACKEND_SECCOMP;
+			error_msg("ptrace is not available on this host;"
+				  " using the seccomp user-notification"
+				  " backend");
+		} else {
+			error_msg_and_die("neither ptrace nor seccomp"
+					  " user notification is available"
+					  " on this host");
+		}
+	}
+
+	if (backend == BACKEND_SECCOMP) {
+		if (nprocs)
+			error_msg_and_help("--backend=seccomp cannot attach"
+					   " to a running process with -p");
+	} else {
+		test_ptrace_seize();
+		if (inject_set)
+			test_ptrace_set_syscall_info();
+		test_ptrace_get_syscall_info();
+	}
 
 	/*
 	 * Is something weird with our stdin and/or stdout -
@@ -3338,8 +3408,12 @@ init(int argc, char *argv[])
 		char **new_environ = make_env(environ, env_changes,
 					      env_change_count);
 		free(env_changes);
+		tracee_environ = new_environ;
 
-		startup_child(argv, new_environ);
+		if (backend == BACKEND_SECCOMP)
+			;	/* senotif_backend_main() starts the tracee */
+		else
+			startup_child(argv, new_environ);
 
 		/*
 		 * On a NOMMU system, new_environ can be freed only after exec
@@ -4516,6 +4590,11 @@ main(int argc, char *argv[])
 	setlocale(LC_ALL, "");
 	init(argc, argv);
 	json_emit_begin(argc, argv);
+
+	if (backend == BACKEND_SECCOMP) {
+		senotif_backend_main(argv + optind);
+		terminate();
+	}
 
 	exit_code = !nprocs;
 

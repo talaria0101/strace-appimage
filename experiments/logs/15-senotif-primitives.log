@@ -1,0 +1,9 @@
+ok:   P1 listener fd received
+ok:   P6a /proc/<pid>/mem openable read-only
+ok:   P2 args + tracee buffer readable via /proc/mem
+ok:   P5a openat path fetched via /proc/mem
+     path=[/etc/ld.so.cache] flags=0
+ok:   P5b tracer-side open succeeded
+ok:   P5c ADDFD installed fd in tracee
+ok:   P6b tracee buffer readable back via /proc/mem
+probe exit=124

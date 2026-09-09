@@ -51,6 +51,18 @@ void ext_free_tcb(struct tcb *tcp);
 /* Shared RFC 8259 string escaper (json events and file report). */
 void ext_json_print_string(FILE *fp, const char *s);
 
+/* Tracing backends (src/senotif.c) */
+enum trace_backend {
+	BACKEND_AUTO = 0,
+	BACKEND_PTRACE,
+	BACKEND_SECCOMP,
+};
+extern enum trace_backend backend;
+extern char **tracee_environ;	/* environment for the seccomp-backend child */
+int senotif_backend_main(char **argv);
+void strace_set_exit_code(int code);
+bool senotif_supported(void);
+
 /* json_out.c */
 void json_emit_begin(int argc, char **argv);
 void json_emit_syscall_event(struct tcb *tcp, const struct timespec *ts);

@@ -122,6 +122,8 @@ json_emit_syscall_event(struct tcb *tcp, const struct timespec *ts)
 		fprintf(fp, ",\"ret\":%" PRI_kld ",\"errno\":",
 			(kernel_long_t) tcp->u_rval);
 		ext_json_print_string(fp, name);
+	} else if (tcp->ext_continued) {
+		fputs(",\"ret\":null,\"continued\":true", fp);
 	} else {
 		fprintf(fp, ",\"ret\":%" PRI_kld ",\"errno\":null",
 			tcp->u_rval);

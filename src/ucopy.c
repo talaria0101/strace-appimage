@@ -13,6 +13,7 @@
  */
 
 #include "defs.h"
+#include <fcntl.h>
 #include <sys/uio.h>
 
 #include "scno.h"
@@ -290,6 +291,13 @@ umoven_peekdata(const int pid, kernel_ulong_t addr, unsigned int len,
 	return 0;
 }
 
+static int umoven_peekdata_or_pmem(struct tcb *const tcp,
+				   kernel_ulong_t addr, unsigned int len,
+				   void *const our_addr);
+static int umovestr_peekdata_or_pmem(struct tcb *const tcp,
+				     kernel_ulong_t addr, unsigned int len,
+				     char *const laddr);
+
 /*
  * Copy `len' bytes of data from process `pid'
  * at address `addr' to our space at `our_addr'.
@@ -304,7 +312,7 @@ umoven(struct tcb *const tcp, kernel_ulong_t addr, unsigned int len,
 	const int pid = tcp->pid;
 
 	if (process_vm_readv_not_supported)
-		return umoven_peekdata(pid, addr, len, our_addr);
+		return umoven_peekdata_or_pmem(tcp, addr, len, our_addr);
 
 	int r = vm_read_mem(pid, our_addr, addr, len);
 	if ((unsigned int) r == len)
@@ -317,8 +325,9 @@ umoven(struct tcb *const tcp, kernel_ulong_t addr, unsigned int len,
 	switch (errno) {
 		case ENOSYS:
 		case EPERM:
-			/* try PTRACE_PEEKDATA */
-			return umoven_peekdata(pid, addr, len, our_addr);
+			/* try PTRACE_PEEKDATA, then /proc/<pid>/mem */
+			return umoven_peekdata_or_pmem(tcp, addr, len,
+						       our_addr);
 		case ESRCH:
 			/* the process is gone */
 			return -1;
@@ -340,6 +349,7 @@ static int
 umovestr_peekdata(const int pid, kernel_ulong_t addr, unsigned int len,
 		  void *laddr)
 {
+
 	unsigned int nread = 0;
 	unsigned int residue = addr & (sizeof(long) - 1);
 	void *const orig_addr = laddr;
@@ -410,7 +420,7 @@ umovestr(struct tcb *const tcp, kernel_ulong_t addr, unsigned int len,
 	const int pid = tcp->pid;
 
 	if (process_vm_readv_not_supported)
-		return umovestr_peekdata(pid, addr, len, laddr);
+		return umovestr_peekdata_or_pmem(tcp, addr, len, laddr);
 
 	const size_t page_size = get_pagesize();
 	const size_t page_mask = page_size - 1;
@@ -442,10 +452,10 @@ umovestr(struct tcb *const tcp, kernel_ulong_t addr, unsigned int len,
 		switch (errno) {
 			case ENOSYS:
 			case EPERM:
-				/* try PTRACE_PEEKDATA */
+				/* try PTRACE_PEEKDATA, then /proc/<pid>/mem */
 				if (!nread)
-					return umovestr_peekdata(pid, addr,
-								 len, laddr);
+					return umovestr_peekdata_or_pmem(tcp,
+						addr, len, laddr);
 				ATTRIBUTE_FALLTHROUGH;
 			case EFAULT: case EIO:
 				/* address space is inaccessible */
@@ -466,6 +476,93 @@ umovestr(struct tcb *const tcp, kernel_ulong_t addr, unsigned int len,
 	}
 
 	return 0;
+}
+
+/*
+ * strace-appimage: last-resort memory access through /proc/<pid>/mem
+ * (opened read-only).  Used by the seccomp user-notification backend
+ * and, generally, on hosts where both process_vm_readv and
+ * PTRACE_PEEKDATA are denied (both answer EPERM in such environments,
+ * including the development sandbox this patchset was built in).
+ * Returns 0 on success, -1 otherwise.
+ */
+static int
+pmem_open(struct tcb *tcp)
+{
+	char path[64];
+
+	snprintf(path, sizeof(path), "/proc/%d/mem", tcp->pid);
+	tcp->pmem_fd = open(path, O_RDONLY);
+	if (tcp->pmem_fd < 0)
+		debug_msg("pmem: open %s failed: %s", path, strerror(errno));
+	return tcp->pmem_fd;
+}
+
+/*
+ * The fd pins the tracee's mm as of open() time: after an execve the
+ * tracee has a new mm and the old fd reads nothing.  Reopen and retry
+ * once when that happens.
+ */
+static ssize_t
+pmem_pread(struct tcb *tcp, void *buf, unsigned int len, kernel_ulong_t addr)
+{
+	if (tcp->pmem_fd < 0 && pmem_open(tcp) < 0)
+		return -1;
+	ssize_t r = pread(tcp->pmem_fd, buf, len, (off_t) addr);
+
+	if (r <= 0) {
+		close(tcp->pmem_fd);
+		tcp->pmem_fd = -1;
+		if (pmem_open(tcp) < 0)
+			return -1;
+		r = pread(tcp->pmem_fd, buf, len, (off_t) addr);
+	}
+	return r;
+}
+
+int
+pmem_read(struct tcb *tcp, kernel_ulong_t addr, unsigned int len, void *laddr)
+{
+	return pmem_pread(tcp, laddr, len, addr) == (ssize_t) len ? 0 : -1;
+}
+
+/* umovestr semantics: length including the NUL when found, else -1 */
+int
+pmem_read_str(struct tcb *tcp, kernel_ulong_t addr, unsigned int len,
+	      char *laddr)
+{
+	if (len > 4096)
+		len = 4096;
+	ssize_t r = pmem_pread(tcp, laddr, len, addr);
+
+	if (r <= 0) {
+		debug_msg("pmem: pread %#" PRI_klx " len %u -> %zd (%s)",
+			  addr, len, r, strerror(errno));
+		return -1;
+	}
+	char *nul = memchr(laddr, '\0', r);
+
+	return nul ? (int) (nul - laddr) + 1 : -1;
+}
+
+static int
+umoven_peekdata_or_pmem(struct tcb *const tcp, kernel_ulong_t addr,
+			unsigned int len, void *const our_addr)
+{
+	if (umoven_peekdata(tcp->pid, addr, len, our_addr) == 0)
+		return 0;
+	return pmem_read(tcp, addr, len, our_addr);
+}
+
+static int
+umovestr_peekdata_or_pmem(struct tcb *const tcp, kernel_ulong_t addr,
+			  unsigned int len, char *const laddr)
+{
+	int r = umovestr_peekdata(tcp->pid, addr, len, laddr);
+
+	if (r >= 0)
+		return r;
+	return pmem_read_str(tcp, addr, len, laddr);
 }
 
 static bool
