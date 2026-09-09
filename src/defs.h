@@ -311,6 +311,13 @@ struct tcb {
 				   its result is unknown */
 	unsigned int ext_nnotes;
 	int keepalive_left;
+	bool keepalive_any;	/* strace-appimage: an exit_group was
+				   suppressed in this process */
+	int keepalive_code;	/* the status of the last suppressed
+				   exit_group, reported as the exit
+				   status when the process faults
+				   afterwards instead of propagating
+				   the fault signal */
 
 	/*
 	 * The ID of the PID namespace of this process

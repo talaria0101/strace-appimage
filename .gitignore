@@ -45,3 +45,16 @@ tests-ext/testbin/antidebug_detect
 tests-ext/testbin/hard_target
 tests-ext/testbin/hard_target_static
 tests-ext/testbin/*.buildlog
+tests-ext/testbin/relpath_target
+tests-ext/testbin/oneshot_exit
+tests-ext/testbin/inherit_target
+tests-ext/testbin/wchan_target
+
+# strace-appimage: e2e artefacts (downloads are pinned by
+# experiments/60-e2e.manifest.sh and re-fetched; extracted trees and
+# bulky traces are regenerable -- committed logs keep the summaries)
+experiments/logs/60-e2e/downloads/
+experiments/logs/60-e2e/*/squashfs-root
+experiments/logs/60-e2e/*/AppDir
+experiments/logs/60-e2e/e2e-bash-work/
+experiments/e2e-bash-work/

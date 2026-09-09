@@ -1401,8 +1401,9 @@ printpathn(struct tcb *const tcp, const kernel_ulong_t addr, unsigned int n)
 			selinux_printfilecon(tcp, path);
 
 		/* strace-appimage: remember the decoded path for
-		 * --json / --report-files. */
-		if (extensions_active() && path[0] == '/')
+		 * --json / --report-files (relative paths are resolved
+		 * against the syscall's dirfd / the tracee's cwd). */
+		if (extensions_active())
 			ext_note_path(tcp, path);
 	}
 

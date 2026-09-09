@@ -7,6 +7,20 @@
 #include <stdio.h>
 #include <string.h>
 
+/* Linkage stubs (see unit_json_escape.c): the tests never resolve fds. */
+int getfdpath_pid(pid_t pid, int fd, char *buf, unsigned bufsize,
+		  bool *deleted);
+int getfdpath_pid(pid_t pid, int fd, char *buf, unsigned bufsize,
+		  bool *deleted)
+{
+	(void) pid;
+	(void) fd;
+	(void) buf;
+	(void) bufsize;
+	(void) deleted;
+	return -1;
+}
+
 static int failures;
 static struct_sysent ent_open, ent_execve, ent_stat, ent_read;
 

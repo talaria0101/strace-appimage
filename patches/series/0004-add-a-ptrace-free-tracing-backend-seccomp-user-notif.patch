@@ -1,7 +1,7 @@
 From 07b9864262b78912fce5c0d609387478009190b8 Mon Sep 17 00:00:00 2001
 From: Talaria <324092415+talaria0101@users.noreply.github.com>
 Date: Wed, 9 Sep 2026 02:50:56 +0000
-Subject: [PATCH 4/5] add a ptrace-free tracing backend (seccomp user
+Subject: [PATCH 4/7] add a ptrace-free tracing backend (seccomp user
  notification)
 
 'If you can run a binary, you must be able to trace it': on hosts where

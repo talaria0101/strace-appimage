@@ -606,9 +606,16 @@ ext_syscall_entering_trace(struct tcb *tcp)
 	if (ext.keep_alive > 0 && tcp->keepalive_left > 0
 	    && strcmp(tcp_sysent(tcp)->sys_name, "exit_group") == 0
 	    && set_scno(tcp, -1) >= 0) {
+		char note[64];
+
 		tcp->flags |= TCB_EXT_KEEPALIVE_SKIP;
 		--tcp->keepalive_left;
-		ext_add_note(tcp, "keep-alive: exit_group suppressed");
+		tcp->keepalive_any = true;
+		tcp->keepalive_code = (int) tcp->u_arg[0];
+		snprintf(note, sizeof(note),
+			 "keep-alive: exit_group(%d) suppressed",
+			 tcp->keepalive_code);
+		ext_add_note(tcp, note);
 	}
 }
 
@@ -631,7 +638,8 @@ ext_syscall_exiting_tamper(struct tcb *tcp, int res)
 	if (res != 1)
 		return;
 
-	if (ext.anti_debug && tcp_sysent(tcp)->sen == SEN_ptrace
+	if ((ext.anti_debug_features & AD_TRACEME)
+	    && tcp_sysent(tcp)->sen == SEN_ptrace
 	    && tcp->u_arg[0] == 0 && tcp->u_error == EPERM) {
 		set_success(tcp, 0);
 		ext_add_note(tcp, "anti-debug: ptrace(PTRACE_TRACEME) "

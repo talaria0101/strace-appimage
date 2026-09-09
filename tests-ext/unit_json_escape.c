@@ -44,5 +44,21 @@ main(void)
 	return failures ? 1 : 0;
 }
 
-/* Linkage stub: error_prints.c needs die(); provide a no-op for the test. */
+/* Linkage stubs: the TU now reaches a few util.c symbols through the
+ * path-resolution helper; the tests exercise only the escaper, so the
+ * stubs simply report "unavailable". */
 void die(void) { _exit(1); }
+struct tracing_ext_state ext;
+const struct_sysent stub_sysent;
+int getfdpath_pid(pid_t pid, int fd, char *buf, unsigned bufsize,
+		  bool *deleted);
+int getfdpath_pid(pid_t pid, int fd, char *buf, unsigned bufsize,
+		  bool *deleted)
+{
+	(void) pid;
+	(void) fd;
+	(void) buf;
+	(void) bufsize;
+	(void) deleted;
+	return -1;
+}

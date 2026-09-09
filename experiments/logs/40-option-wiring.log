@@ -5,4 +5,4 @@ ok:   --keep-alive in --help
 ok:   --packager in --help
 ok:   --backend in --help
 src/strace: ptrace is not available on this host; using the seccomp user-notification backend
-conditions: commit 07b986426, 6.18.39-gentoo-dist-bin, Wed Sep  9 02:57:02 UTC 2026
+conditions: commit e68b3dd96, 6.18.39-gentoo-dist-bin, Wed Sep  9 05:18:50 UTC 2026

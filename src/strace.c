@@ -545,10 +545,12 @@ strace-appimage extensions:\n\
                  operations (open, exec, stat, ...) and outcomes; a\n\
                  drop-in replacement for LD_DEBUG=libs scraping that also\n\
                  works for static binaries\n\
-  --anti-anti-debug\n\
+  --anti-anti-debug[=FEAT[:OFF],...]\n\
                  counter tracee self-checks: spoof ptrace(PTRACE_TRACEME)\n\
-                 results and rewrite TracerPid to 0 in tracee reads of\n\
-                 /proc/<pid>/status\n\
+                 results, rewrite TracerPid to 0 in tracee reads of\n\
+                 /proc/<pid>/status and rewrite /proc/<pid>/wchan reads\n\
+                 (FEAT: traceme|status|wchan|all; :off disables one;\n\
+                 default all)\n\
   --keep-alive[=N]\n\
                  suppress exit_group up to N times per process (default 3)\n\
                  so short-lived or display-less runs reveal more calls\n\
@@ -2607,12 +2609,14 @@ init(int argc, char *argv[])
 		{ "json",		no_argument,	   0, GETOPT_EXT_JSON },
 		{ "report-files",	optional_argument, 0,
 			GETOPT_EXT_REPORT_FILES },
-		{ "anti-anti-debug",	no_argument,	   0,
+		{ "anti-anti-debug",	optional_argument, 0,
 			GETOPT_EXT_ANTI_ANTI_DEBUG },
 		{ "keep-alive",		optional_argument, 0,
 			GETOPT_EXT_KEEP_ALIVE },
 		{ "packager",		no_argument,	   0,
 			GETOPT_EXT_PACKAGER },
+		{ "backend",		required_argument, 0,
+			GETOPT_EXT_BACKEND },
 		{ "decode-pids",required_argument, 0, GETOPT_QUAL_DECODE_PID },
 		{ "secontext",	optional_argument, 0, GETOPT_QUAL_SECONTEXT },
 		{ 0, 0, 0, 0 }
@@ -2681,6 +2685,10 @@ init(int argc, char *argv[])
 			break;
 		case GETOPT_EXT_ANTI_ANTI_DEBUG:
 			ext.anti_debug = true;
+			ext.anti_debug_features = AD_ALL;
+			if (optarg
+			    && !ext_anti_debug_parse_spec(optarg))
+				error_opt_arg(c, lopt, optarg);
 			break;
 		case GETOPT_EXT_KEEP_ALIVE: {
 			int val = 3;
@@ -3114,9 +3122,11 @@ init(int argc, char *argv[])
 			error_msg_and_help("--json and -ff/"
 					   "--output-separately are mutually"
 					   " exclusive");
-		if (cflag == CFLAG_ONLY_STATS)
-			error_msg_and_help("--json has no effect with"
-					   " -c/--summary-only");
+		if (cflag)
+			error_msg_and_help("--json and -c/--summary are"
+					   " mutually exclusive (the JSON"
+					   " stream carries its own summary"
+					   " event)");
 	}
 
 
@@ -3284,6 +3294,41 @@ init(int argc, char *argv[])
 				     PTRACE_O_TRACEFORK |
 				     PTRACE_O_TRACEVFORK;
 
+	if (backend == BACKEND_AUTO) {
+		if (ptrace_selftest_ok()) {
+			backend = BACKEND_PTRACE;
+		} else if (senotif_supported()) {
+			backend = BACKEND_SECCOMP;
+			error_msg("ptrace is not available on this host;"
+				  " using the seccomp user-notification"
+				  " backend");
+		} else {
+			error_msg_and_die("neither ptrace nor seccomp"
+					  " user notification is available"
+					  " on this host");
+		}
+	} else if (backend == BACKEND_SECCOMP) {
+		if (!senotif_supported())
+			error_msg_and_die("--backend=seccomp: the seccomp"
+					  " user-notification facility is"
+					  " not usable on this host");
+	}
+
+	if (backend == BACKEND_SECCOMP) {
+		if (nprocs)
+			error_msg_and_help("--backend=seccomp cannot attach"
+					   " to a running process with -p");
+		if (seccomp_filtering)
+			error_msg_and_help("--seccomp-bpf requires the"
+					   " ptrace backend"
+					   " (--backend=ptrace)");
+	} else {
+		test_ptrace_seize();
+		if (inject_set)
+			test_ptrace_set_syscall_info();
+		test_ptrace_get_syscall_info();
+	}
+
 	if (seccomp_filtering)
 		check_seccomp_filter();
 	if (seccomp_filtering) {
@@ -3303,32 +3348,6 @@ init(int argc, char *argv[])
 	}
 
 	debug_msg("ptrace_setoptions = %#x", ptrace_setoptions);
-
-	if (backend == BACKEND_AUTO) {
-		if (ptrace_selftest_ok()) {
-			backend = BACKEND_PTRACE;
-		} else if (senotif_supported()) {
-			backend = BACKEND_SECCOMP;
-			error_msg("ptrace is not available on this host;"
-				  " using the seccomp user-notification"
-				  " backend");
-		} else {
-			error_msg_and_die("neither ptrace nor seccomp"
-					  " user notification is available"
-					  " on this host");
-		}
-	}
-
-	if (backend == BACKEND_SECCOMP) {
-		if (nprocs)
-			error_msg_and_help("--backend=seccomp cannot attach"
-					   " to a running process with -p");
-	} else {
-		test_ptrace_seize();
-		if (inject_set)
-			test_ptrace_set_syscall_info();
-		test_ptrace_get_syscall_info();
-	}
 
 	/*
 	 * Is something weird with our stdin and/or stdout -
@@ -3751,8 +3770,23 @@ maybe_switch_current_tcp(void)
 static void
 print_signalled(struct tcb *tcp, const int pid, int status)
 {
+	char subst_note[128] = "";
+
 	if (pid == strace_child) {
-		exit_code = 0x100 | WTERMSIG(status);
+		int subst;
+
+		if (ext_keepalive_fault_status(tcp, WTERMSIG(status),
+					       &subst)) {
+			exit_code = subst;
+			snprintf(subst_note, sizeof(subst_note),
+				 "keep-alive: exit_group(%d) was suppressed"
+				 " and the tracee faulted afterwards"
+				 " (%s); reporting the suppressed exit"
+				 " status", subst,
+				 sprintsigname(WTERMSIG(status)));
+		} else {
+			exit_code = 0x100 | WTERMSIG(status);
+		}
 		strace_child = 0;
 	}
 
@@ -3761,7 +3795,9 @@ print_signalled(struct tcb *tcp, const int pid, int status)
 		if (ext.json) {
 			json_emit_signal_event(tcp,
 					       sprintsigname(WTERMSIG(status)),
-					       WCOREDUMP(status));
+					       WCOREDUMP(status),
+					       subst_note[0] ? subst_note
+							     : NULL);
 		} else {
 			printleader(tcp);
 			tprintf_string("+++ killed by %s %s+++",
@@ -3769,6 +3805,12 @@ print_signalled(struct tcb *tcp, const int pid, int status)
 				       WCOREDUMP(status) ? "(core dumped) " : "");
 			tprint_newline();
 			line_ended();
+			if (subst_note[0]) {
+				printleader(tcp);
+				tprintf_string("+++ %s +++", subst_note);
+				tprint_newline();
+				line_ended();
+			}
 		}
 	}
 }

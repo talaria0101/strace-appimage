@@ -2,6 +2,25 @@ Noteworthy changes in release ?.? (????-??-??)
 ==============================================
 
 * Improvements
+  * strace-appimage: --report-files now resolves relative path arguments
+    (via the syscall's dirfd or the tracee's cwd) and records fds the
+    tracee inherited across execve under a new `inherit` operation.
+  * strace-appimage: --anti-anti-debug now also zeroes /proc/<pid>/wchan
+    reads (no more ptrace_stop leaks) and covers pread64/preadv/preadv2;
+    features are selectable via --anti-anti-debug=traceme|status|wchan
+    with an :off suffix (e.g. --anti-anti-debug=traceme:off).
+  * strace-appimage: --keep-alive no longer turns a clean exit into a
+    fault: when the tracee faults after a suppressed exit_group, the
+    suppressed exit's status is reported instead of the fault signal.
+  * strace-appimage: fixed the --backend option being documented but not
+    accepted by the option parser; --seccomp-bpf and -p are now rejected
+    explicitly with --backend=seccomp; the seccomp backend resolves
+    tracee dirfds when emulating open/openat/faccessat (the tracer's fd
+    table is not the tracee's); a tracee blocked on a dropped
+    notification is CONTINUEd instead of hanging forever; exit/signal
+    JSON events are emitted for the seccomp backend too; the backend
+    support probe now requires an actual notification (a silently
+    non-notifying filter no longer counts as supported).
   * strace-appimage: added --json, --report-files, --anti-anti-debug,
     --keep-alive, and --packager options (see doc/strace.1.in and the
     repository README).

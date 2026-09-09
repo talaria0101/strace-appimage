@@ -1,0 +1,1 @@
+/workspace/strace-appimage/experiments/../src/strace: ptrace is not available on this host; using the seccomp user-notification backend

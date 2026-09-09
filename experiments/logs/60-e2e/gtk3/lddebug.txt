@@ -1,0 +1,17 @@
+    187292:	find library=libc.so.6 [0]; searching
+    187292:	 search cache=/etc/ld.so.cache
+    187292:	  trying file=/usr/lib64/libc.so.6
+    187292:	
+    187292:	
+    187292:	calling init: /lib64/ld-linux-x86-64.so.2
+    187292:	
+    187292:	
+    187292:	calling init: /usr/lib64/libc.so.6
+    187292:	
+    187292:	
+    187292:	initialize program: timeout
+    187292:	
+    187292:	
+    187292:	transferring control: timeout
+    187292:	
+timeout: failed to run command ‘15’: No such file or directory

@@ -32,6 +32,10 @@ build() {
 
 build antidebug_detect.c antidebug_detect
 build hard_target.c hard_target -ldl
+build relpath_target.c relpath_target
+build oneshot_exit.c oneshot_exit
+build inherit_target.c inherit_target
+build wchan_target.c wchan_target
 
 # static variants: the interesting case LD_DEBUG=libs cannot cover at all
 if $CC -static -O2 -o hard_target_static hard_target.c -ldl \

@@ -15,6 +15,7 @@
 #include "defs.h"
 #include "tracing_ext.h"
 
+#include <dirent.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 
@@ -70,6 +71,13 @@ static const char *const op_socket[] = {
 static const char *const op_chdir[] = {
 	"chdir", NULL
 };
+static const char *const op_inherit[] = {
+	/* Fds found open in a tracee right after a successful execve
+	 * (i.e. inherited across exec, the "3<&0"-style handoffs of
+	 * packaging scripts).  Recorded when the exec happens, so the
+	 * report also covers fds the tracee never opened itself. */
+	"execve", "execveat", NULL
+};
 
 struct op_group {
 	const char *name;
@@ -92,6 +100,7 @@ static const struct op_group op_groups[] = {
 	{ "xattr", op_xattr },
 	{ "socket", op_socket },
 	{ "chdir", op_chdir },
+	{ "inherit", op_inherit },
 };
 
 #define REPORT_OPS_MAX (int) ARRAY_SIZE(op_groups)
@@ -181,27 +190,56 @@ report_note(const char *path, int group, pid_t pid, bool ok,
 		o->last_errno = err;
 }
 
+static void report_note_inherited_fds(struct tcb *tcp);
+
+/*
+ * Deferred exec-time fd scan for the seccomp backend: at the execve
+ * notification the new image is not live yet, so the backend asks for
+ * the scan on the tracee's next notification, when the fd table is
+ * post-exec (CLOEXEC fds closed).  No-op unless --report-files is on.
+ */
+void
+file_report_note_inherited(struct tcb *tcp)
+{
+	if (!ext.report_files)
+		return;
+	report_note_inherited_fds(tcp);
+}
+
 /* Called from syscall_exiting_trace() for every published syscall. */
 void
 file_report_note_syscall(struct tcb *tcp)
 {
-	if (!ext.report_files || tcp->ext_npaths == 0)
+	if (!ext.report_files)
 		return;
 
 	const char *const name = tcp_sysent(tcp)->sys_name;
 
-	for (int i = 0; i < REPORT_OPS_MAX; ++i)
-		for (const char *const *p = op_groups[i].syscalls; *p; ++p)
-			if (strcmp(*p, name) == 0) {
-				for (unsigned int k = 0;
-				     k < tcp->ext_npaths; ++k)
-					report_note(tcp->ext_paths[k], i,
-						     tcp->pid,
-						     !tcp->u_error,
-						     tcp->u_error,
-						     tcp->ext_continued);
-				return;
-			}
+	if (tcp->ext_npaths > 0) {
+		for (int i = 0; i < REPORT_OPS_MAX; ++i)
+			for (const char *const *p = op_groups[i].syscalls;
+			     *p; ++p)
+				if (strcmp(*p, name) == 0) {
+					for (unsigned int k = 0;
+					     k < tcp->ext_npaths; ++k)
+						report_note(tcp->ext_paths[k],
+							    i, tcp->pid,
+							    !tcp->u_error,
+							    tcp->u_error,
+							    tcp->ext_continued);
+					break;
+				}
+	}
+
+	/*
+	 * A successful exec in this process: record the fds it inherited
+	 * (and not just the exec'd path).  Skipped for CONTINUEd seccomp
+	 * notifications: there the exec outcome is unknown.
+	 */
+	if (!tcp->u_error && !tcp->ext_continued
+	    && (strcmp(name, "execve") == 0
+		|| strcmp(name, "execveat") == 0))
+		report_note_inherited_fds(tcp);
 }
 
 static int
@@ -227,6 +265,42 @@ collect_entries(void)
 			arr[j++] = e;
 	qsort(arr, report_nentries, sizeof(*arr), entry_cmp);
 	return arr;
+}
+
+/*
+ * Fd inheritance across exec (the packager's "app opens what AppRun
+ * handed it"): after a successful execve/execveat, enumerate the new
+ * image's open fds from /proc/<pid>/fd and record each target path as
+ * an `inherit` operation.  CLOEXEC fds are already closed by the
+ * kernel at the exit stop, so what remains is what the tracee sees.
+ */
+static void
+report_note_inherited_fds(struct tcb *tcp)
+{
+	char dpath[64];
+	DIR *d;
+	struct dirent *de;
+
+	snprintf(dpath, sizeof(dpath), "/proc/%d/fd", tcp->pid);
+	d = opendir(dpath);
+	if (!d)
+		return;
+	while ((de = readdir(d)) != NULL) {
+		char fdpath[PATH_MAX + 1];
+		char *end = NULL;
+		long fd = strtol(de->d_name, &end, 10);
+
+		if (!end || *end != '\0' || end == de->d_name || fd < 0)
+			continue;
+		if (getfdpath(tcp, (int) fd, fdpath, sizeof(fdpath)) < 0)
+			continue;
+		if (fdpath[0] == '\0')
+			continue;
+		/* the inherit group is the last one in op_groups */
+		report_note(fdpath, REPORT_OPS_MAX - 1, tcp->pid,
+			    true, 0, false);
+	}
+	closedir(d);
 }
 
 static bool
@@ -295,8 +369,11 @@ file_report_dump_json(FILE *fp)
 			if (is_display_or_device_probe(e->path)) {
 				fprintf(fp, "%s{\"hint\":"
 					   "\"missing_display_or_device\","
-					   "\"path\":\"%s\",\"attempts\":%lu}",
-					first ? "" : ",", e->path, attempts);
+					   "\"path\":",
+					first ? "" : ",");
+				ext_json_print_string(fp, e->path);
+				fprintf(fp, ",\"attempts\":%lu}",
+					attempts);
 				first = false;
 			}
 		}

@@ -88,9 +88,10 @@ json_emit_syscall_event(struct tcb *tcp, const struct timespec *ts)
 		tcp->pid);
 	ext_json_print_string(fp, ent->sys_name);
 
-	/* Raw syscall arguments, in order, as unsigned numbers. */
+	/* Raw syscall arguments, in order, as unsigned numbers (only the
+	 * arguments the syscall table declares for this syscall). */
 	fputs(",\"args\":[", fp);
-	for (unsigned int i = 0; i < MAX_ARGS; ++i) {
+	for (unsigned int i = 0; i < ent->nargs; ++i) {
 		if (i)
 			fputc(',', fp);
 		fprintf(fp, "%" PRI_klu, tcp->u_arg[i]);
@@ -196,7 +197,8 @@ json_emit_syscall_event(struct tcb *tcp, const struct timespec *ts)
  * resolved by the caller (strace.c owns sprintsigname()).
  */
 void
-json_emit_signal_event(struct tcb *tcp, const char *signame, bool coredump)
+json_emit_signal_event(struct tcb *tcp, const char *signame, bool coredump,
+		       const char *note)
 {
 	FILE *fp = shared_log;
 
@@ -207,7 +209,12 @@ json_emit_signal_event(struct tcb *tcp, const char *signame, bool coredump)
 	fprintf(fp, "{\"type\":\"signal\",\"pid\":%d,\"signal\":",
 		tcp->pid);
 	ext_json_print_string(fp, signame ?: "SIG?");
-	fprintf(fp, ",\"core_dumped\":%s}\n", coredump ? "true" : "false");
+	fprintf(fp, ",\"core_dumped\":%s", coredump ? "true" : "false");
+	if (note && *note) {
+		fputs(",\"note\":", fp);
+		ext_json_print_string(fp, note);
+	}
+	fputs("}\n", fp);
 }
 
 /*

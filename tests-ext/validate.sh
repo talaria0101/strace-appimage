@@ -22,9 +22,14 @@
 
 set -u
 cd "$(dirname "$0")"
+HERE=$(pwd)
 
 ROOT=..
 PATCHED=${1:-$ROOT/src/strace}
+case "$PATCHED" in
+	/*) ;;
+	*)	PATCHED="$HERE/$PATCHED" ;;
+esac
 VANILLA=${2:-/usr/bin/strace}
 ART=artifacts
 PASS=0; FAIL=0; SKIP=0; NORUN=0
@@ -57,7 +62,9 @@ fi
 ( cd testbin && ./build.sh ) > "$ART/testbin.build" 2>&1 \
 	|| { echo "test targets failed to build:"; cat "$ART/testbin.build"; exit 2; }
 for b in testbin/antidebug_detect testbin/hard_target \
-	 testbin/hard_target_static; do
+	 testbin/hard_target_static testbin/relpath_target \
+	 testbin/oneshot_exit testbin/inherit_target \
+	 testbin/wchan_target; do
 	[ -x "$b" ] || { echo "missing $b"; exit 2; }
 done
 
@@ -79,6 +86,22 @@ if "$PATCHED" --keep-alive=bogus /bin/true 2>&1 | grep -qi "invalid\|expected"; 
 else
 	# strace prints 'invalid --keep-alive argument' style message
 	bad "--keep-alive=bogus not rejected"
+fi
+if "$PATCHED" --anti-anti-debug=bogus /bin/true 2>&1 | grep -qi "invalid\|expected"; then
+	ok "--anti-anti-debug=bogus rejected"
+else
+	bad "--anti-anti-debug=bogus not rejected"
+fi
+if "$PATCHED" --anti-anti-debug=traceme:off,status -o /dev/null /bin/true \
+		>/dev/null 2>&1; then
+	ok "--anti-anti-debug feature spec accepted"
+else
+	bad "--anti-anti-debug feature spec rejected"
+fi
+if "$PATCHED" --json -c /bin/true 2>&1 | grep -qi "mutually.*exclusive"; then
+	ok "--json vs -c rejected"
+else
+	bad "--json vs -c not rejected"
 fi
 
 # --- 3. unit tests (ptrace-free) ------------------------------------------
@@ -242,6 +265,88 @@ fi
 grep -q "libGL.so.1" "$ART/t6.txt" \
 	&& ok "T7 ours (--packager --keep-alive) captures the fallback libs" \
 	|| bad "T7 ours misses the fallback libs"
+
+# --- T8: relative paths are resolved (issue #3.1) ---------------------------
+T8DIR="$HERE/$ART/t8.dir"
+rm -rf "$T8DIR"; mkdir -p "$T8DIR"
+( cd "$T8DIR" && $RUN "$PATCHED" -f --json \
+	--report-files="$HERE/$ART/t8.report.json" \
+	-o "$HERE/$ART/t8.json" "$HERE/testbin/relpath_target" \
+	> "$HERE/$ART/t8.out" 2>&1 )
+if [ ! -f "$ART/t8.report.json" ]; then
+	bad "T8 report not produced"
+else
+	jq -e --arg d "$T8DIR" '.entries | has(($d) + "/data.txt")' \
+		"$ART/t8.report.json" > /dev/null 2>&1 \
+		&& ok "T8 relative open resolved to the absolute path" \
+		|| bad "T8 relative open not resolved (see $ART/t8.report.json)"
+	jq -e --arg d "$T8DIR" '.entries | has(($d) + "/data2.txt")' \
+		"$ART/t8.report.json" > /dev/null 2>&1 \
+		&& ok "T8 openat through a dirfd resolved" \
+		|| bad "T8 openat dirfd path not resolved"
+	jq -e --arg d "$T8DIR" '.entries | has(($d) + "/data3.txt")' \
+		"$ART/t8.report.json" > /dev/null 2>&1 \
+		&& ok "T8 openat AT_FDCWD relative path resolved" \
+		|| bad "T8 AT_FDCWD relative path not resolved"
+fi
+
+# --- T9: exec-time fd inheritance (issue #3.2) ------------------------------
+( cd "$ART" && $RUN "$PATCHED" -f --json \
+	--report-files="$HERE/$ART/t9.report.json" \
+	-o "$HERE/$ART/t9.json" "$HERE/testbin/inherit_target" \
+	> "$HERE/$ART/t9.out" 2>&1 )
+if [ ! -f "$ART/t9.report.json" ]; then
+	bad "T9 report not produced"
+else
+	jq -e '.entries | to_entries[] | select(.key | test("handed.txt"))
+		| .value.ops.inherit.n >= 1' \
+		"$ART/t9.report.json" > /dev/null 2>&1 \
+		&& ok "T9 inherited fd recorded with the inherit op" \
+		|| bad "T9 inherit op missing (see $ART/t9.report.json)"
+fi
+
+# --- T10: --keep-alive keeps the exit status clean --------------------------
+$RUN "$PATCHED" -f --keep-alive=3 -o "$ART/t10.txt" \
+	./testbin/oneshot_exit > "$ART/t10.out" 2>&1
+rc=$?
+if [ "$rc" = 7 ]; then
+	ok "T10 suppressed exit status reported (exit 7, no signal death)"
+else
+	bad "T10 exit status not clean (rc=$rc, want 7; see $ART/t10.out)"
+fi
+grep -q "reporting the suppressed exit status" "$ART/t10.txt" \
+	&& ok "T10 keep-alive substitution notice present" \
+	|| bad "T10 substitution notice missing"
+$RUN "$PATCHED" --json -f --keep-alive=3 -o "$ART/t10.json" \
+	./testbin/oneshot_exit > "$ART/t10.json.out" 2>&1
+jq -e 'select(.type=="signal") | .note != null' "$ART/t10.json" \
+	> /dev/null 2>&1 \
+	&& ok "T10 json signal event carries the keep-alive note" \
+	|| bad "T10 json signal event note missing"
+# json args must carry only declared arguments (openat: 4)
+$RUN "$PATCHED" --json -o "$ART/t10b.json" /bin/true >/dev/null 2>&1
+jq -e 'select(.syscall=="execve") | (.args | length) == 3' \
+	"$ART/t10b.json" > /dev/null 2>&1 \
+	&& ok "T10 json args follow the syscall table arity" \
+	|| bad "T10 json args arity wrong"
+
+# --- T11: wchan rewrite (ptrace-capable hosts only) -------------------------
+if [ "$T1_SPOOFABLE" = 1 ]; then
+	$RUN "$PATCHED" --anti-anti-debug -f -o "$ART/t11.aad.txt" \
+		./testbin/wchan_target > "$ART/t11.aad.out" 2>&1
+	grep -q "\[wchan\] parent wchan: 0*" "$ART/t11.aad.out" \
+		&& ok "T11 --anti-anti-debug zeroes the wchan read" \
+		|| bad "T11 wchan read not rewritten (see $ART/t11.aad.out)"
+	if [ "$VANILLA_OK" = 1 ]; then
+		$RUN "$VANILLA" -f -o "$ART/t11.v.txt" \
+			./testbin/wchan_target > "$ART/t11.v.out" 2>&1
+		grep -q "ptrace_stop" "$ART/t11.v.out" \
+			&& ok "T11 control: vanilla leaks ptrace_stop" \
+			|| skip "T11 control: vanilla did not show ptrace_stop (timing)"
+	fi
+else
+	skip "T11 wchan rewrite (needs ptrace; host denies it)"
+fi
 
 # --- summary ----------------------------------------------------------------
 printf '\n%d passed, %d failed, %d skipped\n' "$PASS" "$FAIL" "$SKIP"

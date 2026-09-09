@@ -19,6 +19,13 @@ SRC=../src
 CC=${CC:-cc}
 CFLAGS="-DHAVE_CONFIG_H -I$SRC -I$SRC/linux/x86_64"
 OBJS="$SRC/libstrace_a-xmalloc.o $SRC/libstrace_a-error_prints.o"
+# a sanitizer-instrumented tree needs the sanitizer runtime at link time
+if command -v nm >/dev/null 2>&1 \
+   && nm "$SRC/libstrace_a-xmalloc.o" 2>/dev/null | grep -q __asan_; then
+	CFLAGS="$CFLAGS -fsanitize=address"
+	ASAN_OPTIONS=detect_leaks=0
+	export ASAN_OPTIONS
+fi
 fail=0
 
 run() {

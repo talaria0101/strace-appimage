@@ -1905,10 +1905,14 @@ event and a trailing
 .I summary
 event.
 Each syscall event carries the pid, the syscall name, the raw argument
-values, the decoded paths, the return value and errno name, the
-duration in microseconds, a wall\-clock timestamp, the resolved path for
-returned file descriptors, the classic strace line verbatim, and any
-extension notes.
+values (the count follows the syscall table for the running
+architecture), the decoded paths (relative arguments resolved the same
+way
+.B \-\-report\-files
+resolves them), the return value and errno name, the duration in
+microseconds, a wall\-clock timestamp, the resolved path for returned
+file descriptors, the classic strace line verbatim, and any extension
+notes.
 Classic text output is suppressed for syscall lines (it is still
 available inside each event's
 .I line
@@ -1919,12 +1923,28 @@ output: when reading the stream with a parser, write it with
 .B \-o FILE
 (or redirect stderr elsewhere).
 Mutually exclusive with
-.BR \-ff / \-\-output\-separately .
+.BR \-ff / \-\-output\-separately ,
+and with
+.BR \-c / \-\-summary
+(the stream carries its own summary event).
 .TP
 .BI \-\-report\-files [\|=FILE\|]
 At the end of the run, report every path the tracees touched: per path,
 the operations seen (open, exec, stat, unlink, rename, connect, ...) with
 attempt and success counts and the last errno.
+Relative path arguments are resolved the way the tracee would resolve
+them (against the syscall's dirfd, or the tracee's cwd for the
+plain\-path syscalls; when the dirfd or cwd cannot be read from
+.IR /proc ,
+the path is recorded as it appeared).
+After a successful
+.IR execve ,
+the fds the execing process inherited (the CLOEXEC ones are already
+closed) are recorded under an
+.I inherit
+operation, so the report also covers fds a packaging script handed to
+the application; fds inherited across a fork\-without\-exec are not
+re\-recorded (they are already covered by the opener's own entries).
 Paths whose basename contains
 .I ".so"
 are marked as libraries, which makes this a drop\-in replacement for the
@@ -1940,10 +1960,12 @@ the report is a single JSON object (type
 .IR file_report )
 instead of a text table.
 .TP
-.B \-\-anti\-anti\-debug
+.B \-\-anti\-anti\-debug [\|=FEAT[:OFF]\|{,FEAT[:OFF]}\|]
 Counter tracee self\-checks that detect being traced:
 .IP \(bu 4
-ptrace(PTRACE_TRACEME) self\-tests return success instead of EPERM;
+ptrace(PTRACE_TRACEME) self\-tests return success instead of EPERM
+(feature
+.IR traceme );
 .IP \(bu 4
 reads of
 .I /proc/<pid>/status
@@ -1953,13 +1975,32 @@ reads of
 have the digits of the
 .I TracerPid
 value rewritten to zeroes in the tracee's buffer, preserving length and
-offsets.
-.IP
-Known limits: timing\-based checks (for example rdtsc around syscalls),
+offsets (feature
+.IR status );
+.IP \(bu 4
+reads of
 .I /proc/<pid>/wchan
-(reads as "ptrace_stop" while stopped by the tracer), and
-ptrace(PTRACE_ATTACH) self\-checks (spoofing ATTACH would make the
-caller block in wait(2) forever) are not covered.
+have the value rewritten to zeroes, same length\-preserving scheme, so
+a tracee stopped in the tracer no longer reports
+.IR ptrace_stop ""
+(feature
+.IR wchan ).
+.IP
+The optional comma\-separated list selects features; a
+.I :off
+suffix disables one
+.RI ( e.g. "\-\-anti\-anti\-debug=traceme:off"
+keeps the
+.I /proc
+rewrites but stops spoofing TRACEME).  The default is all features.
+.IP
+Known limits: timing\-based checks (for example rdtsc around syscalls)
+and ptrace(PTRACE_ATTACH) self\-checks (spoofing ATTACH would make the
+caller block in wait(2) forever) are not covered; readv-family rewrites
+use the native iovec layout only (compat, i.e. 32\-bit, tracees are
+skipped); in the seccomp backend TracerPid is genuinely 0, so no
+rewrite happens there and TRACEME can only be spoofed when the host
+does not deny the ptrace syscall class before the tracee's own filter.
 Spoofing TRACEME changes behaviour for tracees that use it
 .I legitimately
 (a debugger run under strace would previously get a clean error and now
@@ -1976,10 +2017,16 @@ present) keep running and reveal more of their syscall behaviour.
 The suppression is visible in the trace (a
 .I keep\-alive
 note on the line, a note field in JSON events).
-Note that a program which has nothing left to execute after its exit
-path may crash or busy\-loop once the budget is exhausted; use the
-.I exit
-of the report to see whether that happened.
+A program which has nothing left to execute after a suppressed exit
+falls off its exit path and usually faults (glibc's _exit ends in
+.IR hlt );
+when the tracee dies this way, its fault signal is not propagated:
+the tracer reports the status of the last suppressed
+.I exit_group
+as the tracee's outcome instead (the fault itself stays visible as a
+signal event carrying an explanatory note), so scripted runs of
+.B \-\-keep\-alive
+keep a clean exit status.
 .TP
 .B \-\-packager
 Preset for AppImage/library packaging work: enables
@@ -2010,7 +2057,14 @@ This backend works wherever a program can run \(em no ptrace, no root,
 no eBPF \(em including environments where the ptrace syscall class is
 denied outright, where
 .I auto
-selects it with a notice.
+selects it with a notice; it is built for x86_64 and aarch64 (the
+decoders use the native syscall table, so the filter pins the native
+audit architecture).
+.B \-\-seccomp\-bpf
+and
+.B \-p
+require the ptrace backend and are rejected with
+.BR \-\-backend=seccomp .
 Its limits: no signal events; attaching to a running process
 .RB ( \-p )
 is impossible; the exit status of signal\-killed tracees is reported

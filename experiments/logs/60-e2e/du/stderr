@@ -1,0 +1,4 @@
+/workspace/strace-appimage/experiments/../src/strace: ptrace is not available on this host; using the seccomp user-notification backend
+du: cannot read directory '/usr/share/polkit-1/rules.d': Bad file descriptor
+du: cannot read directory '/usr/lib/containers/storage/overlay-images': Bad file descriptor
+du: cannot read directory '/usr/lib/containers/storage/overlay-layers': Bad file descriptor

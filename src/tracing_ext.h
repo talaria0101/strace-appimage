@@ -22,13 +22,20 @@
 struct tracing_ext_state {
 	bool json;		/* --json */
 	bool report_files;	/* --report-files */
-	bool anti_debug;	/* --anti-anti-debug */
+	bool anti_debug;	/* --anti-anti-debug (any feature) */
+	unsigned int anti_debug_features; /* AD_* feature bits */
 	bool packager;		/* --packager (preset) */
 	int keep_alive;		/* --keep-alive=N (0 = off) */
 	bool keep_alive_set;	/* --keep-alive given explicitly */
 	bool report_files_set;	/* --report-files given explicitly */
 	FILE *report_fp;	/* report destination (NULL = shared log) */
 };
+
+/* --anti-anti-debug feature bits (--anti-anti-debug=feat[:off],...) */
+#define AD_TRACEME	(1U << 0)	/* spoof ptrace(PTRACE_TRACEME) results */
+#define AD_STATUS	(1U << 1)	/* rewrite TracerPid in /proc status reads */
+#define AD_WCHAN	(1U << 2)	/* rewrite /proc wchan reads */
+#define AD_ALL		(AD_TRACEME | AD_STATUS | AD_WCHAN)
 
 extern struct tracing_ext_state ext;
 
@@ -39,7 +46,10 @@ extensions_active(void)
 	       || ext.keep_alive > 0;
 }
 
-/* Per-syscall path capture (fed from printpathn and friends). */
+/* Per-syscall path capture (fed from printpathn and friends).
+ * Relative paths are resolved against the syscall's dirfd (or the
+ * tracee's cwd for non-at syscalls) when /proc allows it; unresolvable
+ * paths are recorded as-is. */
 void ext_reset_paths(struct tcb *tcp);
 void ext_note_path(struct tcb *tcp, const char *path);
 /* Per-syscall human notes, emitted in JSON events and classic output. */
@@ -50,6 +60,12 @@ const char *ext_notes_joined(struct tcb *tcp, char sep);
 void ext_free_tcb(struct tcb *tcp);
 /* Shared RFC 8259 string escaper (json events and file report). */
 void ext_json_print_string(FILE *fp, const char *s);
+
+/* --anti-anti-debug[=SPEC] parser; false on an unknown feature */
+bool ext_anti_debug_parse_spec(const char *spec);
+/* --keep-alive: did this process fault after a suppressed exit_group? */
+bool ext_keepalive_fault_status(const struct tcb *tcp, unsigned int sig,
+				int *code_out);
 
 /* Tracing backends (src/senotif.c) */
 enum trace_backend {
@@ -67,12 +83,13 @@ bool senotif_supported(void);
 void json_emit_begin(int argc, char **argv);
 void json_emit_syscall_event(struct tcb *tcp, const struct timespec *ts);
 void json_emit_signal_event(struct tcb *tcp, const char *signame,
-			    bool coredump);
+			    bool coredump, const char *note);
 void json_emit_stop_event(struct tcb *tcp, const char *signame);
 void json_emit_exit_event(struct tcb *tcp, int code);
 void json_emit_summary(void);
 /* file_report.c */
 void file_report_note_syscall(struct tcb *tcp);
+void file_report_note_inherited(struct tcb *tcp);
 void file_report_dump(FILE *out_fp);
 void file_report_free(void);
 /* anti_debug.c */
