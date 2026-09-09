@@ -3297,11 +3297,20 @@ init(int argc, char *argv[])
 	if (backend == BACKEND_AUTO) {
 		if (ptrace_selftest_ok()) {
 			backend = BACKEND_PTRACE;
-		} else if (senotif_supported()) {
+		} else if (!nprocs && senotif_supported()) {
 			backend = BACKEND_SECCOMP;
 			error_msg("ptrace is not available on this host;"
 				  " using the seccomp user-notification"
 				  " backend");
+		} else if (nprocs) {
+			/*
+			 * -p/--attach: the seccomp backend cannot attach
+			 * to a running process, so stay with the ptrace
+			 * backend -- the attach attempt then produces its
+			 * genuine error (and the yama hint) instead of a
+			 * generic help message.
+			 */
+			backend = BACKEND_PTRACE;
 		} else {
 			error_msg_and_die("neither ptrace nor seccomp"
 					  " user notification is available"

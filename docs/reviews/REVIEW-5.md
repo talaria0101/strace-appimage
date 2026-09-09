@@ -53,6 +53,15 @@ x86_64, gcc 15.3.0.
 | C5 | 60-e2e.sh's own first runs found three test-design bugs worth recording: multicall coreutils dispatches on argv[0] (applet-named copies required); the Anylinux shim layer rewrites library access through a `/KEK/` prefix (the report records exactly what the tracee requested); musl curl skips its own stderr diagnostics for file-redirected stderr even untraced (assert exit code instead) | all folded into the script; documented in the experiments README |
 | C6 | a full `/tmp` tmpfs made every writer lose output silently — including two false "tracer hangs" and one false "tracer regression" during this pass | documented as an operational condition; artefact-heavy runs keep their work off tmpfs |
 
+## Pass D — CI triage (the run on the pushed HEAD; not reproducible locally)
+
+| # | finding | resolution |
+| --- | --- | --- |
+| D1 | **Every build job failed on `attach-p-eperm-yama`**: the test disables ptrace for the traced strace and expects the genuine `attach: ptrace(PTRACE_SEIZE, <pid>): Operation not permitted` (plus the yama hint); pass A's auto-fallback hijacked `-p` into the seccomp backend, which can only print a help message | fixed: `auto` no longer falls back to seccomp when `-p` is given — the tracer stays on the ptrace backend and the attach attempt reports its genuine error; man page updated |
+| D2 | the whitespace job (`git diff-index --check` against the empty tree) failed on the **derived** `patches/series/*.patch` files (diff context lines are "space before tab" by construction) and on captured tool output in `experiments/logs/` (LD_DEBUG emits tab-only lines); our sources are clean | fixed via `.gitattributes`: `patches/series/*.patch -whitespace`, `experiments/logs/** -whitespace` (git's own exemption mechanism; the workflow file is untouched) |
+| D3 | the coverage job's codecov upload failed with `Repository not found` (`fail_ci_if_error: true`) — this repository is not registered on Codecov | fixed: `fail_ci_if_error: false` for the upload step; the coverage build itself still gates |
+| D4 | initially suspected `strace-k*` failures in libunwind jobs | false positive: those were `XFAIL: strace-k.test` lines matching a sloppy grep; the only real test failure was D1 |
+
 ## Verdict
 
 Both open issues are closed in code (#3.1 relative-path resolution,

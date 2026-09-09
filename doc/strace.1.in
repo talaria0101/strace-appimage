@@ -2044,7 +2044,10 @@ is the classic strace engine.
 .B seccomp
 is a ptrace\-free engine: the tracee installs a seccomp
 user\-notification filter over its own syscalls before exec and hands
-the listener to the tracer; memory arguments are fetched through
+the listener to the tracer; the fallback is not used when
+.B \-p
+is given (the tracer stays on the ptrace backend and the attach attempt
+reports its genuine error); memory arguments are fetched through
 .BR /proc/<pid>/mem ,
 open/openat are emulated in the tracer (fds installed with
 SECCOMP_IOCTL_NOTIF_ADDFD, so their results are real), and everything
